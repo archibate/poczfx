@@ -10,7 +10,7 @@ std::ostream &operator<<(std::ostream &os, Op const &op) {
 
 int main() {
     ZFXTokenizer tok;
-    tok.tokenize("!a+b ");
+    tok.tokenize("!a+b+c");
     for (auto const &t: tok.tokens) {
         std::visit([&] (auto const &t) {
             if constexpr (std::is_same_v<std::decay_t<decltype(t)>, std::string>) {

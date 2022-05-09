@@ -12,6 +12,14 @@
 
 namespace zeno::zfx {
 
+template <class ...Fs>
+struct overloaded : Fs... {
+    using Fs::operator()...;
+};
+
+template <class ...Fs>
+overloaded(Fs...) -> overloaded<Fs...>;
+
 enum class Op {
     kAssign,
     kPlus,
@@ -39,10 +47,17 @@ enum class Op {
     kRightBrace,
     kLeftBracket,
     kRightBracket,
+    kLeftBlock,
+    kRightBlock,
+    kKeywordIf,
+    kKeywordElse,
+    kKeywordFor,
+    kKeywordWhile,
+    kKeywordReturn,
 };
 
 using Ident = std::string;
-using Token = std::variant<Op, float, int, Ident>;
+using Token = std::variant<Op, Ident, float, int>;
 
 
 struct ZFXTokenizer {
@@ -67,6 +82,8 @@ struct ZFXTokenizer {
         {')', Op::kRightBrace},
         {'[', Op::kLeftBracket},
         {']', Op::kRightBracket},
+        {'{', Op::kLeftBlock},
+        {'}', Op::kRightBlock},
     };
 
     static inline std::map<std::pair<char, char>, Op> lut2{
@@ -80,6 +97,14 @@ struct ZFXTokenizer {
         {{'>', '>'}, Op::kBitShr},
     };
 
+    static inline std::map<std::string, Op> lutkwd{
+        {"if", Op::kKeywordIf},
+        {"else", Op::kKeywordElse},
+        {"for", Op::kKeywordFor},
+        {"while", Op::kKeywordWhile},
+        {"return", Op::kKeywordReturn},
+    };
+
     static bool isident(char c) noexcept {
         return std::isalnum(c) || c == '_' || c == '$' || c == '@';
     }
@@ -90,19 +115,23 @@ struct ZFXTokenizer {
                 auto ep = std::find_if_not(ins.cbegin() + 1, ins.cend(), [] (char c) {
                     return std::isdigit(c) || c == '.';
                 });
-                std::string res(ins.cbegin(), ep);
-                if (std::find(ins.cbegin(), ep, '.') != ins.cend()) {
-                    return std::stof(res);
+                std::string s(ins.cbegin(), ep);
+                if (s.find_first_of('.') != std::string::npos) {
+                    return std::stof(s);
                 } else {
-                    return std::stoi(res);
+                    return std::stoi(s);
                 }
             } else if (isident(ins[0])) {
                 auto it = std::find_if_not(ins.cbegin() + 1, ins.cend(), [] (char c) {
                     return isident(c);
                 });
-                std::string res(ins.cbegin(), it);
+                std::string id(ins.cbegin(), it);
                 ins.remove_prefix(it - ins.cbegin());
-                return res;
+                if (auto it = lutkwd.find(id); it != lutkwd.end()) {
+                    return it->second;
+                } else {
+                    return id;
+                }
             }
         }
         if (ins.size() >= 2) {
@@ -132,5 +161,20 @@ struct ZFXTokenizer {
         }
     }
 };
+
+
+struct ZFXParser {
+    void parse(std::vector<Token> const &tokens) {
+        for (auto const &t: tokens) {
+            std::visit(overloaded{
+                [] (Ident const &id) {
+                },
+                [] (auto const &t) {
+                },
+            }, t);
+        }
+    }
+};
+
 
 }
