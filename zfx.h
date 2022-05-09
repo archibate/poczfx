@@ -3,6 +3,10 @@
 #include <vector>
 #include <string>
 #include <cctype>
+#include <memory>
+#include "span.h"
+#include "overloaded.h"
+#include "scope_exit.h"
 #include <algorithm>
 #include <string_view>
 #include <optional>
@@ -11,14 +15,6 @@
 #include <map>
 
 namespace zeno::zfx {
-
-template <class ...Fs>
-struct overloaded : Fs... {
-    using Fs::operator()...;
-};
-
-template <class ...Fs>
-overloaded(Fs...) -> overloaded<Fs...>;
 
 enum class Op {
     kAssign,
@@ -54,6 +50,8 @@ enum class Op {
     kKeywordFor,
     kKeywordWhile,
     kKeywordReturn,
+    kComma,
+    kSemicolon,
 };
 
 using Ident = std::string;
@@ -84,6 +82,8 @@ struct ZFXTokenizer {
         {']', Op::kRightBracket},
         {'{', Op::kLeftBlock},
         {'}', Op::kRightBlock},
+        {',', Op::kComma},
+        {';', Op::kSemicolon},
     };
 
     static inline std::map<std::pair<char, char>, Op> lut2{
@@ -162,17 +162,86 @@ struct ZFXTokenizer {
     }
 };
 
+struct AST {
+    Token token;
+    std::vector<std::unique_ptr<AST>> chs;
+};
 
 struct ZFXParser {
-    void parse(std::vector<Token> const &tokens) {
-        for (auto const &t: tokens) {
-            std::visit(overloaded{
-                [] (Ident const &id) {
-                },
-                [] (auto const &t) {
-                },
-            }, t);
+    std::unique_ptr<AST> root;
+    AST *curr{};
+
+    ZFXParser() {
+        root = std::make_unique<AST>();
+        curr = root.get();
+    }
+
+    span<Token> tokens;
+
+    Token next_token() {
+        auto token = std::move(tokens.front());
+        tokens.remove_suffix(1);
+        return token;
+    }
+
+    bool token_eof() const {
+        return tokens.empty();
+    }
+
+    std::optional<Op> next_op(std::initializer_list<Op> const &ops) {
+        if (token_eof())
+            return std::nullopt;
+        auto token = next_token();
+        if (auto *p_op = std::get_if<Op>(&token)) {
+            auto &&op = *p_op;
+            if (std::find(ops.begin(), ops.end(), op) == ops.end()) {
+            }
+            return op;
         }
+        return std::nullopt;
+    }
+
+    std::unique_ptr<AST> expr_atom() {
+        if (token_eof())
+            return nullptr;
+        auto token = next_token();
+        return overloaded{
+        [&] (Ident const &ident) -> std::unique_ptr<AST> {
+            auto node = std::make_unique<AST>();
+            node->token = ident;
+            return node;
+        },
+        [&] (float const &val) -> std::unique_ptr<AST> {
+            auto node = std::make_unique<AST>();
+            node->token = val;
+            return node;
+        },
+        [&] (int const &val) -> std::unique_ptr<AST> {
+            auto node = std::make_unique<AST>();
+            node->token = val;
+            return node;
+        },
+        [&] (auto const &) -> std::unique_ptr<AST> {
+            return nullptr;
+        },
+        }.match(token);
+    }
+
+    std::unique_ptr<AST> expr_plus() {
+        scope_restore rst{tokens};
+        if (auto lhs = expr_atom()) {
+            if (auto p_op = next_op({Op::kPlus, Op::kMinus})) {
+                auto &&op = *p_op;
+                if (auto rhs = expr_atom()) {
+                    auto node = std::make_unique<AST>();
+                    node->token = op;
+                    node->chs = {std::move(lhs), std::move(rhs)};
+                    rst.release();
+                    return node;
+                }
+            }
+        }
+        return nullptr;
     }
 };
 
