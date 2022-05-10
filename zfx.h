@@ -171,75 +171,102 @@ struct ZFXParser {
     std::unique_ptr<AST> root;
     AST *curr{};
 
-    ZFXParser() {
+    explicit ZFXParser(span<Token> a_tokens) noexcept : tokens(a_tokens) {
         root = std::make_unique<AST>();
         curr = root.get();
     }
 
     span<Token> tokens;
 
-    Token next_token() {
+    Token next_token() noexcept {
         auto token = std::move(tokens.front());
-        tokens.remove_suffix(1);
+        tokens.remove_prefix(1);
         return token;
     }
 
-    bool token_eof() const {
+    bool token_eof() const noexcept {
         return tokens.empty();
     }
 
-    std::optional<Op> next_op(std::initializer_list<Op> const &ops) {
+    std::optional<Op> next_op(std::initializer_list<Op> const &ops) noexcept {
         if (token_eof())
             return std::nullopt;
+        scope_restore rst{tokens};
         auto token = next_token();
         if (auto *p_op = std::get_if<Op>(&token)) {
-            auto &&op = *p_op;
-            if (std::find(ops.begin(), ops.end(), op) == ops.end()) {
+            auto &op = *p_op;
+            if (std::find(ops.begin(), ops.end(), op) != ops.end()) {
+                rst.release();
+                return op;
             }
-            return op;
         }
         return std::nullopt;
     }
 
-    std::unique_ptr<AST> expr_atom() {
+    std::unique_ptr<AST> expr_atom() noexcept {
         if (token_eof())
             return nullptr;
+        scope_restore rst{tokens};
         auto token = next_token();
         return overloaded{
-        [&] (Ident const &ident) -> std::unique_ptr<AST> {
+        [&] (Ident const &ident) {
             auto node = std::make_unique<AST>();
             node->token = ident;
+            rst.release();
             return node;
         },
-        [&] (float const &val) -> std::unique_ptr<AST> {
+        [&] (float const &val) {
             auto node = std::make_unique<AST>();
             node->token = val;
+            rst.release();
             return node;
         },
-        [&] (int const &val) -> std::unique_ptr<AST> {
+        [&] (int const &val) {
             auto node = std::make_unique<AST>();
             node->token = val;
+            rst.release();
             return node;
         },
-        [&] (auto const &) -> std::unique_ptr<AST> {
+        [&] (auto const &) {
             return nullptr;
         },
-        }.match(token);
+        }.match<std::unique_ptr<AST>>(token);
     }
 
-    std::unique_ptr<AST> expr_plus() {
+    std::unique_ptr<AST> expr_multiply() noexcept {
         scope_restore rst{tokens};
         if (auto lhs = expr_atom()) {
-            if (auto p_op = next_op({Op::kPlus, Op::kMinus})) {
-                auto &&op = *p_op;
+            while (1) if (auto p_op = next_op({Op::kMultiply, Op::kDivide, Op::kModulus})) {
+                auto &op = *p_op;
                 if (auto rhs = expr_atom()) {
                     auto node = std::make_unique<AST>();
                     node->token = op;
-                    node->chs = {std::move(lhs), std::move(rhs)};
-                    rst.release();
-                    return node;
+                    node->chs.push_back(std::move(lhs));
+                    node->chs.push_back(std::move(rhs));
+                    lhs = std::move(node);
                 }
-            }
+            } else break;
+            rst.release();
+            return lhs;
+        }
+        return nullptr;
+    }
+
+    std::unique_ptr<AST> expr_plus() noexcept {
+        scope_restore rst{tokens};
+        if (auto lhs = expr_multiply()) {
+            while (1) if (auto p_op = next_op({Op::kPlus, Op::kMinus})) {
+                auto &op = *p_op;
+                if (auto rhs = expr_multiply()) {
+                    auto node = std::make_unique<AST>();
+                    node->token = op;
+                    node->chs.push_back(std::move(lhs));
+                    node->chs.push_back(std::move(rhs));
+                    lhs = std::move(node);
+                }
+            } else break;
+            rst.release();
+            return lhs;
         }
         return nullptr;
     }

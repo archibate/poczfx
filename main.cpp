@@ -8,18 +8,29 @@ std::ostream &operator<<(std::ostream &os, Op const &op) {
     return os << "Op::" << magic_enum::enum_name(op);
 }
 
-int main() {
-    ZFXTokenizer tok;
-    tok.tokenize("!a+b+c");
-    for (auto const &t: tok.tokens) {
-        overloaded{
+std::ostream &operator<<(std::ostream &os, Token const &token) {
+    overloaded{
         [&] (std::string const &t) {
-            std::cout << '"' << t << '"' << std::endl;
+            os << '"' << t << '"';
         },
         [&] (auto const &t) {
-            std::cout << t << std::endl;
+            os << t;
         },
-        }.match(t);
-    }
+    }.match(token);
+    return os;
+}
+
+int main() {
+    ZFXTokenizer tok;
+    tok.tokenize("a+b+c");
+
+    for (auto const &token: tok.tokens)
+        std::cout << token << std::endl;
+
+    ZFXParser par{tok.tokens};
+    auto ast = par.expr_plus();
+    if (!ast) throw std::runtime_error("failed to parse");
+    std::cout << ast->token << std::endl;
+
     return 0;
 }

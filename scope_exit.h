@@ -117,7 +117,7 @@ public:
 
 
 template <class T, class U = T, class = std::enable_if_t<!std::is_const_v<T>>>
-scope_modify(T &, U &&) -> scope_modify<T>;
+scope_restore(T &, U &&) -> scope_restore<T>;
 
 
 template <class T>

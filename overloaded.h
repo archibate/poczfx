@@ -7,9 +7,17 @@ template <class ...Fs>
 struct overloaded : Fs... {
     using Fs::operator()...;
 
-    template <class ...Ts>
+    struct __auto_guess {};
+
+    template <class Ret = __auto_guess, class ...Ts>
     decltype(auto) match(Ts &&...ts) const {
-        return std::visit(*this, std::forward<Ts>(ts)...);
+        if constexpr (std::is_same_v<Ret, __auto_guess>) {
+            return std::visit(*this, std::forward<Ts>(ts)...);
+        } else {
+            return std::visit([this] (auto &&...ts) -> Ret {
+                return (*this)(std::forward<decltype(ts)>(ts)...);
+            }, std::forward<Ts>(ts)...);
+        }
     }
 };
 
