@@ -20,17 +20,26 @@ std::ostream &operator<<(std::ostream &os, Token const &token) {
     return os;
 }
 
+
 int main() {
     ZFXTokenizer tok;
     tok.tokenize("a+b+c");
 
-    //for (auto const &token: tok.tokens)
-        //std::cout << token << std::endl;
-
     ZFXParser par{tok.tokens};
     auto ast = par.expr_binary();
     if (!ast) throw std::runtime_error("failed to parse");
-    //std::cout << ast->token << std::endl;
+
+    ZFXLower low;
+    auto irid = low.visit(ast.get());
+
+    ZFXScanner sca{low.nodes};
+    sca.scan();
+    
+    ZFXEmitter emi{sca.out_nodes, sca.reglut};
+    emi.generate();
+    for (auto c: emi.codes) {
+        std::cout << c << std::endl;
+    }
 
     return 0;
 }

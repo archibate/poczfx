@@ -5,6 +5,7 @@
 #include <cctype>
 #include <memory>
 #include "span.h"
+#include "enumtools.h"
 #include "overloaded.h"
 #include "scope_exit.h"
 #include <algorithm>
@@ -71,7 +72,7 @@ using Token = std::variant<Op, Ident, float, int>;
 struct ZFXTokenizer {
     std::vector<Token> tokens;
 
-    static inline std::map<char, Op> lut1{
+    static const inline std::map<char, Op> lut1{
         {'=', Op::kAssign},
         {'+', Op::kPlus},
         {'-', Op::kMinus},
@@ -98,7 +99,7 @@ struct ZFXTokenizer {
         {';', Op::kSemicolon},
     };
 
-    static inline std::map<std::tuple<char, char>, Op> lut2{
+    static const inline std::map<std::tuple<char, char>, Op> lut2{
         {{'&', '&'}, Op::kLogicAnd},
         {{'|', '|'}, Op::kLogicOr},
         {{'=', '='}, Op::kCmpEqual},
@@ -117,12 +118,12 @@ struct ZFXTokenizer {
         {{'|', '='}, Op::kBitOrAssign},
     };
 
-    //static inline std::map<std::tuple<char, char, char>, Op> lut3{
+    //static const inline std::map<std::tuple<char, char, char>, Op> lut3{
         //{{'<', '<', '='}, Op::kBitShlAssign},
         //{{'>', '>', '='}, Op::kBitShrAssign},
     //};
 
-    static inline std::map<std::string, Op> lutkwd{
+    static const inline std::map<std::string, Op> lutkwd{
         {"if", Op::kKeywordIf},
         {"else", Op::kKeywordElse},
         {"for", Op::kKeywordFor},
@@ -301,6 +302,215 @@ struct ZFXParser {
     std::unique_ptr<AST> expr_assign() noexcept {
         if (auto lhs = expr_binary()) {
             auto rhs = expr_binary();
+        }
+        return nullptr; // TODO!!!!
+    }
+};
+
+
+enum class IRId : std::uint32_t {};
+
+struct IREmpty {
+};
+
+struct IROp {
+    Op op;
+    std::vector<IRId> args;
+};
+
+struct IRSym {
+    std::string name;
+};
+
+struct IRConstFloat {
+    float val;
+};
+
+struct IRConstInt {
+    int val;
+};
+
+using IRNode = std::variant
+< IREmpty
+, IRConstInt
+, IRConstFloat
+, IROp
+, IRSym
+>;
+
+
+struct ZFXLower {
+    std::vector<IRNode> nodes;
+
+    IRId visit(AST const *ast) noexcept {
+        IRId currid{nodes.size()};
+        auto node = overloaded{
+            [&] (Ident const &name) {
+                return IRSym{name};
+            },
+            [&] (Op const &op) {
+                std::vector<IRId> chsid;
+                chsid.reserve(ast->chs.size());
+                for (auto const &chast: ast->chs) {
+                    chsid.push_back(visit(chast.get()));
+                }
+                switch (op) {
+                    default: {
+                        return IROp{op, std::move(chsid)};
+                    } break;
+                }
+            },
+            [&] (float const &val) {
+                return IRConstFloat{val};
+            },
+            [&] (int const &val) {
+                return IRConstInt{val};
+            },
+            [&] (auto const &) {
+                return IREmpty{};
+            },
+        }.match<IRNode>(ast->token);
+        nodes.push_back(std::move(node));
+        return currid;
+    }
+};
+
+
+enum class RegId : std::uint32_t {};
+
+struct ZFXScanner {
+    span<IRNode> in_nodes;
+    std::vector<IRNode> out_nodes;
+    std::vector<RegId> reglut;
+    std::map<IRId, IRId> irdeps;
+
+    explicit ZFXScanner(span<IRNode> a_in_nodes) noexcept : in_nodes(a_in_nodes) {}
+
+    void scan() {
+        std::uint32_t nodenr = 0;
+        for (auto const &node: in_nodes) {
+            IRId irid{nodenr};
+            overloaded{
+                [&] (IROp const &ir) {
+                    for (auto const &arg: ir.args) {
+                        irdeps.insert({irid, arg});
+                    }
+                },
+                [&] (auto const &) {
+                },
+            }.match(node);
+            reglut.push_back(RegId{to_underlying(irid)});
+            out_nodes.push_back(node);
+            ++nodenr;
+        }
+    }
+};
+
+
+enum class Bc : std::uint32_t {
+    kLdInt,
+    kLdFloat,
+    kLdSymbol,
+    kAssign,
+    kPlus,
+    kMinus,
+    kMultiply,
+    kDivide,
+    kModulus,
+    kBitInverse,
+    kBitAnd,
+    kBitOr,
+    kBitXor,
+    kBitShl,
+    kBitShr,
+    kLogicNot,
+    kLogicAnd,
+    kLogicOr,
+    kCmpEqual,
+    kCmpNotEqual,
+    kCmpLessThan,
+    kCmpLessEqual,
+    kCmpGreaterThan,
+    kCmpGreaterEqual,
+};
+
+struct ZFXEmitter {
+    span<IRNode> nodes;
+    span<RegId> reglut;
+    std::vector<std::uint32_t> codes;
+
+    static const inline std::map<Op, Bc> op2bc{
+        {Op::kAssign, Bc::kAssign},
+        {Op::kPlus, Bc::kPlus},
+        {Op::kMinus, Bc::kMinus},
+        {Op::kMultiply, Bc::kMultiply},
+        {Op::kDivide, Bc::kDivide},
+        {Op::kModulus, Bc::kModulus},
+        {Op::kBitInverse, Bc::kBitInverse},
+        {Op::kBitAnd, Bc::kBitAnd},
+        {Op::kBitOr, Bc::kBitOr},
+        {Op::kBitXor, Bc::kBitXor},
+        {Op::kBitShl, Bc::kBitShl},
+        {Op::kBitShr, Bc::kBitShr},
+        {Op::kLogicNot, Bc::kLogicNot},
+        {Op::kLogicAnd, Bc::kLogicAnd},
+        {Op::kLogicOr, Bc::kLogicOr},
+        {Op::kCmpEqual, Bc::kCmpEqual},
+        {Op::kCmpNotEqual, Bc::kCmpNotEqual},
+        {Op::kCmpLessThan, Bc::kCmpLessThan},
+        {Op::kCmpLessEqual, Bc::kCmpLessEqual},
+        {Op::kCmpGreaterThan, Bc::kCmpGreaterThan},
+        {Op::kCmpGreaterEqual, Bc::kCmpGreaterEqual},
+    };
+
+    explicit ZFXEmitter(span<IRNode> a_nodes, span<RegId> a_reglut) noexcept
+        : nodes(a_nodes), reglut(a_reglut) {
+    }
+
+    void emit_bc(Bc bc) noexcept {
+        codes.push_back(to_underlying(bc));
+    }
+
+    void emit_reg(RegId nr) noexcept {
+        codes.push_back(to_underlying(nr));
+    }
+
+    void emit_sym(Ident id) noexcept {
+        codes.push_back(std::hash<Ident>{}(id));
+    }
+
+    void emit_int(int x) noexcept {
+        codes.push_back(bit_cast<std::uint32_t>(x));
+    }
+
+    void emit_float(float x) noexcept {
+        codes.push_back(bit_cast<std::uint32_t>(x));
+    }
+
+    void generate() noexcept {
+        for (IRNode const &node: nodes) {
+            overloaded{
+                [&] (IRConstInt const &ir) {
+                    emit_bc(Bc::kLdInt);
+                    emit_int(ir.val);
+                },
+                [&] (IRConstFloat const &ir) {
+                    emit_bc(Bc::kLdFloat);
+                    emit_float(ir.val);
+                },
+                [&] (IROp const &ir) {
+                    emit_bc(op2bc.at(ir.op));
+                    for (auto const &a: ir.args) {
+                        emit_reg(reglut.at(to_underlying(a)));
+                    }
+                },
+                [&] (IRSym const &ir) {
+                    emit_bc(Bc::kLdSymbol);
+                    emit_sym(ir.name);
+                },
+                [&] (auto const &) {
+                },
+            }.match(node);
         }
     }
 };
