@@ -23,6 +23,14 @@ enum class Op {
     kMultiply,
     kDivide,
     kModulus,
+    kPlusAssign,
+    kMinusAssign,
+    kMultiplyAssign,
+    kDivideAssign,
+    kModulusAssign,
+    kBitAndAssign,
+    kBitOrAssign,
+    kBitXorAssign,
     kMember,
     kBitInverse,
     kBitAnd,
@@ -45,13 +53,15 @@ enum class Op {
     kRightBracket,
     kLeftBlock,
     kRightBlock,
+    kTernary,
+    kTernaryElse,
+    kComma,
+    kSemicolon,
     kKeywordIf,
     kKeywordElse,
     kKeywordFor,
     kKeywordWhile,
     kKeywordReturn,
-    kComma,
-    kSemicolon,
 };
 
 using Ident = std::string;
@@ -82,11 +92,13 @@ struct ZFXTokenizer {
         {']', Op::kRightBracket},
         {'{', Op::kLeftBlock},
         {'}', Op::kRightBlock},
+        {'?', Op::kTernary},
+        {':', Op::kTernaryElse},
         {',', Op::kComma},
         {';', Op::kSemicolon},
     };
 
-    static inline std::map<std::pair<char, char>, Op> lut2{
+    static inline std::map<std::tuple<char, char>, Op> lut2{
         {{'&', '&'}, Op::kLogicAnd},
         {{'|', '|'}, Op::kLogicOr},
         {{'=', '='}, Op::kCmpEqual},
@@ -95,7 +107,20 @@ struct ZFXTokenizer {
         {{'>', '='}, Op::kCmpGreaterEqual},
         {{'<', '<'}, Op::kBitShl},
         {{'>', '>'}, Op::kBitShr},
+        {{'+', '='}, Op::kPlusAssign},
+        {{'-', '='}, Op::kMinusAssign},
+        {{'*', '='}, Op::kMultiplyAssign},
+        {{'/', '='}, Op::kDivideAssign},
+        {{'%', '='}, Op::kModulusAssign},
+        {{'&', '='}, Op::kBitAndAssign},
+        {{'^', '='}, Op::kBitXorAssign},
+        {{'|', '='}, Op::kBitOrAssign},
     };
+
+    //static inline std::map<std::tuple<char, char, char>, Op> lut3{
+        //{{'<', '<', '='}, Op::kBitShlAssign},
+        //{{'>', '>', '='}, Op::kBitShrAssign},
+    //};
 
     static inline std::map<std::string, Op> lutkwd{
         {"if", Op::kKeywordIf},
@@ -233,42 +258,50 @@ struct ZFXParser {
         }.match<std::unique_ptr<AST>>(token);
     }
 
-    std::unique_ptr<AST> expr_multiply() noexcept {
-        scope_restore rst{tokens};
-        if (auto lhs = expr_atom()) {
-            while (1) if (auto p_op = next_op({Op::kMultiply, Op::kDivide, Op::kModulus})) {
-                auto &op = *p_op;
-                if (auto rhs = expr_atom()) {
-                    auto node = std::make_unique<AST>();
-                    node->token = op;
-                    node->chs.push_back(std::move(lhs));
-                    node->chs.push_back(std::move(rhs));
-                    lhs = std::move(node);
-                }
-            } else break;
-            rst.release();
-            return lhs;
+    template <std::size_t N>
+    std::unique_ptr<AST> expr_template(std::initializer_list<Op> *p_ops) noexcept {
+        if constexpr (N == 0) {
+            return expr_atom();
+        } else {
+            scope_restore rst{tokens};
+            if (auto lhs = expr_template<N - 1>(p_ops + 1)) {
+                while (1) if (auto p_op = next_op(*p_ops)) {
+                    auto &op = *p_op;
+                    if (auto rhs = expr_template<N - 1>(p_ops + 1)) {
+                        auto node = std::make_unique<AST>();
+                        node->token = op;
+                        node->chs.push_back(std::move(lhs));
+                        node->chs.push_back(std::move(rhs));
+                        lhs = std::move(node);
+                    }
+                } else break;
+                rst.release();
+                return lhs;
+            }
+            return nullptr;
         }
-        return nullptr;
     }
 
-    std::unique_ptr<AST> expr_plus() noexcept {
-        scope_restore rst{tokens};
-        if (auto lhs = expr_multiply()) {
-            while (1) if (auto p_op = next_op({Op::kPlus, Op::kMinus})) {
-                auto &op = *p_op;
-                if (auto rhs = expr_multiply()) {
-                    auto node = std::make_unique<AST>();
-                    node->token = op;
-                    node->chs.push_back(std::move(lhs));
-                    node->chs.push_back(std::move(rhs));
-                    lhs = std::move(node);
-                }
-            } else break;
-            rst.release();
-            return lhs;
+    std::unique_ptr<AST> expr_binary() noexcept {
+        std::initializer_list<Op> lvs[] = {
+            { Op::kLogicOr, },
+            { Op::kLogicAnd, },
+            { Op::kBitOr, },
+            { Op::kBitXor, },
+            { Op::kBitAnd, },
+            { Op::kCmpEqual, Op::kCmpNotEqual, },
+            { Op::kCmpLessThan, Op::kCmpLessEqual, Op::kCmpGreaterThan, Op::kCmpGreaterEqual, },
+            { Op::kBitShl, Op::kBitShr, },
+            { Op::kPlus, Op::kMinus, },
+            { Op::kMultiply, Op::kDivide, Op::kModulus, },
+        };
+        return expr_template<std::size(lvs)>(std::data(lvs));
+    }
+
+    std::unique_ptr<AST> expr_assign() noexcept {
+        if (auto lhs = expr_binary()) {
+            auto rhs = expr_binary();
         }
-        return nullptr;
     }
 };
 

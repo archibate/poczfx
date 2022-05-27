@@ -24,13 +24,13 @@ int main() {
     ZFXTokenizer tok;
     tok.tokenize("a+b+c");
 
-    for (auto const &token: tok.tokens)
-        std::cout << token << std::endl;
+    //for (auto const &token: tok.tokens)
+        //std::cout << token << std::endl;
 
     ZFXParser par{tok.tokens};
-    auto ast = par.expr_plus();
+    auto ast = par.expr_binary();
     if (!ast) throw std::runtime_error("failed to parse");
-    std::cout << ast->token << std::endl;
+    //std::cout << ast->token << std::endl;
 
     return 0;
 }
