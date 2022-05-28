@@ -1,0 +1,58 @@
+#pragma once
+
+#include <cstdint>
+
+namespace zeno::zfx {
+
+enum class Bc : std::uint32_t {
+    kLoadConst,
+    kAddrSymbol,
+    kAddrOffset,
+    kLoadPtr,
+    kStorePtr,
+    kAssign,
+    kNegateInt,
+    kPlusInt,
+    kMinusInt,
+    kMultiplyInt,
+    kDivideInt,
+    kModulusInt,
+    kBitInverseInt,
+    kBitAndInt,
+    kBitOrInt,
+    kBitXorInt,
+    kBitShlInt,
+    kBitShrInt,
+    kLogicNotInt,
+    kLogicAndInt,
+    kLogicOrInt,
+    kCmpEqualInt,
+    kCmpNotEqualInt,
+    kCmpLessThanInt,
+    kCmpLessEqualInt,
+    kCmpGreaterThanInt,
+    kCmpGreaterEqualInt,
+    kNegateFloat,
+    kPlusFloat,
+    kMinusFloat,
+    kMultiplyFloat,
+    kDivideFloat,
+    kModulusFloat,
+    kBitInverseFloat,
+    kBitAndFloat,
+    kBitOrFloat,
+    kBitXorFloat,
+    kBitShlFloat,
+    kBitShrFloat,
+    kLogicNotFloat,
+    kLogicAndFloat,
+    kLogicOrFloat,
+    kCmpEqualFloat,
+    kCmpNotEqualFloat,
+    kCmpLessThanFloat,
+    kCmpLessEqualFloat,
+    kCmpGreaterThanFloat,
+    kCmpGreaterEqualFloat,
+};
+
+}

@@ -20,4 +20,9 @@ constexpr To const &bit_cast(T const &t) noexcept {
     return *reinterpret_cast<To const *>(std::addressof(t));
 }
 
+template <class To, class T>
+constexpr To &bit_cast(T &t) noexcept {
+    return *reinterpret_cast<To *>(std::addressof(t));
+}
+
 }

@@ -1,48 +1,23 @@
-#include "zfx.h"
-#include <iostream>
+#include "zfx/ZFXCode.h"
+#include "zfx/ZFXExec.h"
 #include "magic_enum.hpp"
+#include <iostream>
+#include <map>
 
 using namespace zeno::zfx;
 
-std::ostream &operator<<(std::ostream &os, Op const &op) {
-    return os << "Op::" << magic_enum::enum_name(op);
-}
-
-std::ostream &operator<<(std::ostream &os, Token const &token) {
-    overloaded{
-        [&] (std::string const &t) {
-            os << '"' << t << '"';
-        },
-        [&] (auto const &t) {
-            os << t;
-        },
-    }.match(token);
-    return os;
-}
-
 
 int main() {
-    ZFXTokenizer tok;
-    tok.tokenize("a+b+c");
+    ZFXCode co("a+b+c");
 
-    ZFXParser par{tok.tokens};
-    auto ast = par.expr_binary();
-    if (!ast) throw std::runtime_error("failed to parse");
-
-    ZFXLower low;
-    auto irid = low.visit(ast.get());
-
-    ZFXScanner sca{low.nodes};
-    sca.scan();
-    
-    ZFXEmitter emi{low.nodes, sca.reglut};
-    emi.generate();
-    for (auto c: emi.codes) {
-        std::cout << c << std::endl;
+    std::map<std::string, std::uint32_t> syms;
+    for (int i = 0; i < co.syms.size(); i++) {
+        auto const &sym = co.syms[i];
+        co.symtab[i] = &syms[sym];
     }
 
-    ZFXRunner run{emi.codes};
-    run.execute();
+    ZFXExec ex(co);
+    ex.execute();
 
     return 0;
 }

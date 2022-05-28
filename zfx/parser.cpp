@@ -1,5 +1,7 @@
 #pragma once
 
+#include "ZFXCode.h"
+#include "bc.h"
 #include <vector>
 #include <string>
 #include <cctype>
@@ -16,6 +18,8 @@
 #include <map>
 
 namespace zeno::zfx {
+namespace {
+
 
 enum class Op {
     kAssign,
@@ -197,7 +201,7 @@ struct ZFXParser {
     std::unique_ptr<AST> root;
     AST *curr{};
 
-    explicit ZFXParser(span<Token> a_tokens) noexcept : tokens(a_tokens) {
+    explicit ZFXParser(span<Token> a_tokens) noexcept : tokens{a_tokens} {
         root = std::make_unique<AST>();
         curr = root.get();
     }
@@ -377,13 +381,14 @@ struct ZFXLower {
 
 
 enum class RegId : std::uint32_t {};
+enum class SymId : std::uint32_t {};
 
 struct ZFXScanner {
     span<IRNode> nodes;
     std::vector<RegId> reglut;
     std::map<IRId, IRId> irdeps;
 
-    explicit ZFXScanner(span<IRNode> a_nodes) noexcept : nodes(a_nodes) {}
+    explicit ZFXScanner(span<IRNode> a_nodes) noexcept : nodes{a_nodes} {}
 
     void scan() {
         std::uint32_t nodenr = 0;
@@ -405,33 +410,6 @@ struct ZFXScanner {
 };
 
 
-enum class Bc : std::uint32_t {
-    kLdInt,
-    kLdFloat,
-    kLdSymbol,
-    kAssign,
-    kPlus,
-    kMinus,
-    kMultiply,
-    kDivide,
-    kModulus,
-    kBitInverse,
-    kBitAnd,
-    kBitOr,
-    kBitXor,
-    kBitShl,
-    kBitShr,
-    kLogicNot,
-    kLogicAnd,
-    kLogicOr,
-    kCmpEqual,
-    kCmpNotEqual,
-    kCmpLessThan,
-    kCmpLessEqual,
-    kCmpGreaterThan,
-    kCmpGreaterEqual,
-};
-
 struct ZFXEmitter {
     span<IRNode> nodes;
     span<RegId> reglut;
@@ -439,30 +417,32 @@ struct ZFXEmitter {
 
     static const inline std::map<Op, Bc> op2bc{
         {Op::kAssign, Bc::kAssign},
-        {Op::kPlus, Bc::kPlus},
-        {Op::kMinus, Bc::kMinus},
-        {Op::kMultiply, Bc::kMultiply},
-        {Op::kDivide, Bc::kDivide},
-        {Op::kModulus, Bc::kModulus},
-        {Op::kBitInverse, Bc::kBitInverse},
-        {Op::kBitAnd, Bc::kBitAnd},
-        {Op::kBitOr, Bc::kBitOr},
-        {Op::kBitXor, Bc::kBitXor},
-        {Op::kBitShl, Bc::kBitShl},
-        {Op::kBitShr, Bc::kBitShr},
-        {Op::kLogicNot, Bc::kLogicNot},
-        {Op::kLogicAnd, Bc::kLogicAnd},
-        {Op::kLogicOr, Bc::kLogicOr},
-        {Op::kCmpEqual, Bc::kCmpEqual},
-        {Op::kCmpNotEqual, Bc::kCmpNotEqual},
-        {Op::kCmpLessThan, Bc::kCmpLessThan},
-        {Op::kCmpLessEqual, Bc::kCmpLessEqual},
-        {Op::kCmpGreaterThan, Bc::kCmpGreaterThan},
-        {Op::kCmpGreaterEqual, Bc::kCmpGreaterEqual},
+        {Op::kPlus, Bc::kPlusInt},
+        {Op::kMinus, Bc::kMinusInt},
+        {Op::kMultiply, Bc::kMultiplyInt},
+        {Op::kDivide, Bc::kDivideInt},
+        {Op::kModulus, Bc::kModulusInt},
+        {Op::kBitInverse, Bc::kBitInverseInt},
+        {Op::kBitAnd, Bc::kBitAndInt},
+        {Op::kBitOr, Bc::kBitOrInt},
+        {Op::kBitXor, Bc::kBitXorInt},
+        {Op::kBitShl, Bc::kBitShlInt},
+        {Op::kBitShr, Bc::kBitShrInt},
+        {Op::kLogicNot, Bc::kLogicNotInt},
+        {Op::kLogicAnd, Bc::kLogicAndInt},
+        {Op::kLogicOr, Bc::kLogicOrInt},
+        {Op::kCmpEqual, Bc::kCmpEqualInt},
+        {Op::kCmpNotEqual, Bc::kCmpNotEqualInt},
+        {Op::kCmpLessThan, Bc::kCmpLessThanInt},
+        {Op::kCmpLessEqual, Bc::kCmpLessEqualInt},
+        {Op::kCmpGreaterThan, Bc::kCmpGreaterThanInt},
+        {Op::kCmpGreaterEqual, Bc::kCmpGreaterEqualInt},
     };
 
+    std::map<std::string, SymId> symlut;
+
     explicit ZFXEmitter(span<IRNode> a_nodes, span<RegId> a_reglut) noexcept
-        : nodes(a_nodes), reglut(a_reglut) {
+        : nodes{a_nodes}, reglut{a_reglut} {
     }
 
     void emit_bc(Bc bc) noexcept {
@@ -473,8 +453,15 @@ struct ZFXEmitter {
         codes.push_back(to_underlying(nr));
     }
 
-    void emit_sym(Ident id) noexcept {
-        codes.push_back(std::hash<Ident>{}(id));
+    void emit_sym(Ident const &id) noexcept {
+        auto it = symlut.find(id);
+        if (it != symlut.end()) {
+            codes.push_back(to_underlying(it->second));
+        } else {
+            SymId symid{static_cast<std::uint32_t>(symlut.size())};
+            symlut.insert({id, symid});
+            codes.push_back(to_underlying(symid));
+        }
     }
 
     void emit_int(int x) noexcept {
@@ -486,62 +473,67 @@ struct ZFXEmitter {
     }
 
     void generate() noexcept {
+        std::uint32_t nodenr = 0;
         for (IRNode const &node: nodes) {
             overloaded{
                 [&] (IRConstInt const &ir) {
-                    emit_bc(Bc::kLdInt);
+                    emit_bc(Bc::kLoadConst);
+                    emit_reg(reglut.at(nodenr));
                     emit_int(ir.val);
                 },
                 [&] (IRConstFloat const &ir) {
-                    emit_bc(Bc::kLdFloat);
+                    emit_bc(Bc::kLoadConst);
+                    emit_reg(reglut.at(nodenr));
                     emit_float(ir.val);
                 },
                 [&] (IROp const &ir) {
                     emit_bc(op2bc.at(ir.op));
+                    emit_reg(reglut.at(nodenr));
                     for (auto const &a: ir.args) {
                         emit_reg(reglut.at(to_underlying(a)));
                     }
                 },
                 [&] (IRSym const &ir) {
-                    emit_bc(Bc::kLdSymbol);
+                    emit_bc(Bc::kAddrSymbol);
                     emit_sym(ir.name);
                 },
                 [&] (auto const &) {
                 },
             }.match(node);
+            ++nodenr;
         }
     }
 };
 
 
-struct ZFXRunner {
-    span<std::uint32_t> codes;
-    std::vector<std::uint32_t> stack;
-    std::vector<std::uint32_t> symtab;
-    std::vector<std::uint32_t> regtab;
+}
 
-    explicit ZFXRunner(span<std::uint32_t> a_codes) noexcept : codes(a_codes) {}
 
-    void execute() const {
-        auto ip = codes.begin();
-        while (ip != codes.end()) {
-            Bc bc{*ip++};
-            switch (bc) {
-                case Bc::kLdFloat:
-                case Bc::kLdInt:
-                {
-                    std::uint32_t val = *ip++;
-                    stack.push_back(val);
-                } break;
-                case Bc::kLdSymbol:
-                {
-                    std::uint32_t symid = *ip++;
-                    stack.push_back(symtab[symid]);
-                } break;
-            }
-        }
+ZFXCode::ZFXCode(std::string_view ins) {
+    ZFXTokenizer tok;
+    tok.tokenize(ins);
+
+    ZFXParser par{tok.tokens};
+    auto ast = par.expr_binary();
+    if (!ast) throw std::runtime_error("failed to parse");
+
+    ZFXLower low;
+    auto irid = low.visit(ast.get());
+
+    ZFXScanner sca{low.nodes};
+    sca.scan();
+    
+    ZFXEmitter emi{low.nodes, sca.reglut};
+    emi.generate();
+
+    syms.resize(emi.symlut.size());
+    for (auto &[k, v]: emi.symlut) {
+        syms[to_underlying(v)] = std::move(k);
     }
-};
+    symtab.resize(syms.size());
+
+    codes = std::move(emi.codes);
+}
 
 
 }
