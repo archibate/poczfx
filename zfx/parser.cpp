@@ -299,15 +299,23 @@ struct ZFXParser {
             { Op::kBitShl, Op::kBitShr, },
             { Op::kPlus, Op::kMinus, },
             { Op::kMultiply, Op::kDivide, Op::kModulus, },
+            { Op::kAssign, Op::kPlusAssign, Op::kMinusAssign, Op::kMultiplyAssign, Op::kDivideAssign, Op::kModulusAssign, Op::kBitAndAssign, Op::kBitOrAssign, Op::kBitXorAssign, },
+            { Op::kComma, },
         };
         return expr_template<std::size(lvs)>(std::data(lvs));
     }
 
-    std::unique_ptr<AST> expr_assign() noexcept {
-        if (auto lhs = expr_binary()) {
-            auto rhs = expr_binary();
-        }
-        return nullptr; // TODO!!!!
+    std::unique_ptr<AST> expr_top() noexcept {
+        scope_restore rst{tokens};
+        auto node = std::make_unique<AST>();
+        node->token = Op::kSemicolon;
+        while (1) if (auto p_stm = expr_binary()) {
+            while (1) if (auto p_op = next_op({Op::kSemicolon})) {
+                node->chs.push_back(std::move(p_stm));
+            } else break;
+        } else break;
+        rst.release();
+        return node;
     }
 };
 
@@ -315,6 +323,10 @@ struct ZFXParser {
 enum class IRId : std::uint32_t {};
 
 struct IREmpty {
+};
+
+struct IRBlock {
+    std::vector<IRId> stmts;
 };
 
 struct IROp {
@@ -347,22 +359,18 @@ struct ZFXLower {
     std::vector<IRNode> nodes;
 
     IRId visit(AST const *ast) noexcept {
-        IRId currid{nodes.size()};
+        IRId currid{static_cast<std::uint32_t>(nodes.size())};
         auto node = overloaded{
             [&] (Ident const &name) {
                 return IRSym{name};
             },
-            [&] (Op const &op) {
+            [&] (Op const &op) -> IRNode {
                 std::vector<IRId> chsid;
                 chsid.reserve(ast->chs.size());
                 for (auto const &chast: ast->chs) {
                     chsid.push_back(visit(chast.get()));
                 }
-                switch (op) {
-                    default: {
-                        return IROp{op, std::move(chsid)};
-                    } break;
-                }
+                return IROp{op, std::move(chsid)};
             },
             [&] (float const &val) {
                 return IRConstFloat{val};
@@ -487,10 +495,12 @@ struct ZFXEmitter {
                     emit_float(ir.val);
                 },
                 [&] (IROp const &ir) {
-                    emit_bc(op2bc.at(ir.op));
-                    emit_reg(reglut.at(nodenr));
-                    for (auto const &a: ir.args) {
-                        emit_reg(reglut.at(to_underlying(a)));
+                    if (auto it = op2bc.find(ir.op); it != op2bc.end()) {
+                        emit_bc(it->second);
+                        emit_reg(reglut.at(nodenr));
+                        for (auto const &a: ir.args) {
+                            emit_reg(reglut.at(to_underlying(a)));
+                        }
                     }
                 },
                 [&] (IRSym const &ir) {
@@ -514,7 +524,7 @@ ZFXCode::ZFXCode(std::string_view ins) {
     tok.tokenize(ins);
 
     ZFXParser par{tok.tokens};
-    auto ast = par.expr_binary();
+    auto ast = par.expr_top();
     if (!ast) throw std::runtime_error("failed to parse");
 
     ZFXLower low;
@@ -533,6 +543,7 @@ ZFXCode::ZFXCode(std::string_view ins) {
     symtab.resize(syms.size());
 
     codes = std::move(emi.codes);
+    nregs = sca.reglut.size();
 }
 
 
