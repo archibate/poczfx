@@ -35,11 +35,14 @@ int main() {
     ZFXScanner sca{low.nodes};
     sca.scan();
     
-    ZFXEmitter emi{sca.out_nodes, sca.reglut};
+    ZFXEmitter emi{low.nodes, sca.reglut};
     emi.generate();
     for (auto c: emi.codes) {
         std::cout << c << std::endl;
     }
+
+    ZFXRunner run{emi.codes};
+    run.execute();
 
     return 0;
 }

@@ -379,16 +379,15 @@ struct ZFXLower {
 enum class RegId : std::uint32_t {};
 
 struct ZFXScanner {
-    span<IRNode> in_nodes;
-    std::vector<IRNode> out_nodes;
+    span<IRNode> nodes;
     std::vector<RegId> reglut;
     std::map<IRId, IRId> irdeps;
 
-    explicit ZFXScanner(span<IRNode> a_in_nodes) noexcept : in_nodes(a_in_nodes) {}
+    explicit ZFXScanner(span<IRNode> a_nodes) noexcept : nodes(a_nodes) {}
 
     void scan() {
         std::uint32_t nodenr = 0;
-        for (auto const &node: in_nodes) {
+        for (auto const &node: nodes) {
             IRId irid{nodenr};
             overloaded{
                 [&] (IROp const &ir) {
@@ -400,7 +399,6 @@ struct ZFXScanner {
                 },
             }.match(node);
             reglut.push_back(RegId{to_underlying(irid)});
-            out_nodes.push_back(node);
             ++nodenr;
         }
     }
@@ -511,6 +509,36 @@ struct ZFXEmitter {
                 [&] (auto const &) {
                 },
             }.match(node);
+        }
+    }
+};
+
+
+struct ZFXRunner {
+    span<std::uint32_t> codes;
+    std::vector<std::uint32_t> stack;
+    std::vector<std::uint32_t> symtab;
+    std::vector<std::uint32_t> regtab;
+
+    explicit ZFXRunner(span<std::uint32_t> a_codes) noexcept : codes(a_codes) {}
+
+    void execute() const {
+        auto ip = codes.begin();
+        while (ip != codes.end()) {
+            Bc bc{*ip++};
+            switch (bc) {
+                case Bc::kLdFloat:
+                case Bc::kLdInt:
+                {
+                    std::uint32_t val = *ip++;
+                    stack.push_back(val);
+                } break;
+                case Bc::kLdSymbol:
+                {
+                    std::uint32_t symid = *ip++;
+                    stack.push_back(symtab[symid]);
+                } break;
+            }
         }
     }
 };
