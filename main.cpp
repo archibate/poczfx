@@ -8,16 +8,16 @@ using namespace zeno::zfx;
 
 
 int main() {
-    ZFXCode co("a+b+c");
-
-    std::map<std::string, std::uint32_t> syms;
-    for (int i = 0; i < co.syms.size(); i++) {
-        auto const &sym = co.syms[i];
-        co.symtab[i] = &syms[sym];
-    }
+    ZFXCode co("a=a+a;");
 
     ZFXExec ex(co);
+    for (int i = 0; i < ex.symtab.size(); i++) {
+        auto const &sym = ex.symtab[i];
+        ex.symtab[i] = Object{2};
+    }
     ex.execute();
 
+    std::cout << ex.symtab[0] << std::endl;
+    std::cout << "done" << std::endl;
     return 0;
 }

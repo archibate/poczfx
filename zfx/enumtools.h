@@ -2,6 +2,7 @@
 
 #include <type_traits>
 #include <utility>
+#include <cstdint>
 
 namespace zeno {
 

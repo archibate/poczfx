@@ -5,62 +5,47 @@
 #include <cstdint>
 #include <memory>
 #include "span.h"
+#include "enumtools.h"
 #include <string_view>
 #include "ZFXCode.h"
+#include "Object.h"
 #include "bc.h"
 
 namespace zeno::zfx {
 
 struct ZFXExec {
     span<std::uint32_t const> codes;
-    std::vector<std::uint32_t> regtab;
-    span<std::uint32_t *const> symtab;
+    std::vector<Object> regtab;
+    std::vector<Object> symtab;
     std::uint32_t *ptrreg{};
 
     explicit ZFXExec(ZFXCode const &co) noexcept
         : codes{co.codes}
         , regtab(co.nregs)
-        , symtab{co.symtab}
+        , symtab(co.syms.size())
     {}
 
     void execute() {
-        auto regi = reinterpret_cast<int *>(regtab.data());
-        auto regf = reinterpret_cast<float *>(regtab.data());
+        int *const regi = reinterpret_cast<int *>(regtab.data());
+        float *const regf = reinterpret_cast<float *>(regtab.data());
 
-        auto ip = codes.begin();
+        std::uint32_t const *ip = codes.begin();
         while (ip != codes.end()) {
             Bc bc{*ip++};
             switch (bc) {
 
-                case Bc::kLoadConst:
+                case Bc::kLoadConstInt:
                 {
                     std::uint32_t regid = *ip++;
                     std::uint32_t val = *ip++;
-                    regtab[regid] = val;
+                    regtab[regid] = Object{bit_cast<int>(val)};
                 } break;
 
-                case Bc::kAddrSymbol:
-                {
-                    std::uint32_t symid = *ip++;
-                    ptrreg = symtab[symid];
-                } break;
-
-                case Bc::kAddrOffset:
+                case Bc::kLoadConstFloat:
                 {
                     std::uint32_t regid = *ip++;
-                    ptrreg += regtab[regid];
-                } break;
-
-                case Bc::kLoadPtr:
-                {
-                    std::uint32_t regid = *ip++;
-                    regtab[regid] = *ptrreg;
-                } break;
-
-                case Bc::kStorePtr:
-                {
-                    std::uint32_t regid = *ip++;
-                    *ptrreg = regtab[regid];
+                    std::uint32_t val = *ip++;
+                    regtab[regid] = Object{bit_cast<float>(val)};
                 } break;
 
                 case Bc::kAssign:
@@ -70,21 +55,14 @@ struct ZFXExec {
                     regtab[reg1] = regtab[reg2];
                 } break;
 
-                case Bc::kNegateInt:
+                case Bc::kNegate:
                 {
                     std::uint32_t reg0 = *ip++;
                     std::uint32_t reg1 = *ip++;
-                    regi[reg0] = -regi[reg1];
+                    regtab[reg0] = -regtab[reg1];
                 } break;
 
-                case Bc::kNegateFloat:
-                {
-                    std::uint32_t reg0 = *ip++;
-                    std::uint32_t reg1 = *ip++;
-                    regf[reg0] = -regf[reg1];
-                } break;
-
-                case Bc::kPlusInt:
+                case Bc::kPlus:
                 {
                     std::uint32_t reg0 = *ip++;
                     std::uint32_t reg1 = *ip++;
@@ -92,28 +70,12 @@ struct ZFXExec {
                     regi[reg0] = regi[reg1] + regi[reg2];
                 } break;
 
-                case Bc::kPlusFloat:
-                {
-                    std::uint32_t reg0 = *ip++;
-                    std::uint32_t reg1 = *ip++;
-                    std::uint32_t reg2 = *ip++;
-                    regf[reg0] = regf[reg1] + regf[reg2];
-                } break;
-
-                case Bc::kMinusInt:
+                case Bc::kMinus:
                 {
                     std::uint32_t reg0 = *ip++;
                     std::uint32_t reg1 = *ip++;
                     std::uint32_t reg2 = *ip++;
                     regi[reg0] = regi[reg1] - regi[reg2];
-                } break;
-
-                case Bc::kMinusFloat:
-                {
-                    std::uint32_t reg0 = *ip++;
-                    std::uint32_t reg1 = *ip++;
-                    std::uint32_t reg2 = *ip++;
-                    regf[reg0] = regf[reg1] - regf[reg2];
                 } break;
 
                 default: break;

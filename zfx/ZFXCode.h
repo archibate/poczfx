@@ -10,7 +10,6 @@ namespace zeno::zfx {
 
 struct ZFXCode {
     std::vector<std::string> syms;
-    std::vector<std::uint32_t *> symtab;
     std::vector<std::uint32_t> codes;
     std::size_t nregs{};
 

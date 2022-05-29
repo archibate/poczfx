@@ -1,5 +1,3 @@
-#pragma once
-
 #include "ZFXCode.h"
 #include "bc.h"
 #include <vector>
@@ -145,18 +143,19 @@ struct ZFXTokenizer {
                 auto ep = std::find_if_not(ins.cbegin() + 1, ins.cend(), [] (char c) {
                     return std::isdigit(c) || c == '.';
                 });
-                std::string s(ins.cbegin(), ep);
-                if (s.find_first_of('.') != std::string::npos) {
-                    return std::stof(s);
+                std::string id(ins.cbegin(), ep);
+                ins.remove_prefix(ep - ins.cbegin());
+                if (id.find_first_of('.') != std::string::npos) {
+                    return std::stof(id);
                 } else {
-                    return std::stoi(s);
+                    return std::stoi(id);
                 }
             } else if (isident(ins[0])) {
-                auto it = std::find_if_not(ins.cbegin() + 1, ins.cend(), [] (char c) {
+                auto ep = std::find_if_not(ins.cbegin() + 1, ins.cend(), [] (char c) {
                     return isident(c);
                 });
-                std::string id(ins.cbegin(), it);
-                ins.remove_prefix(it - ins.cbegin());
+                std::string id(ins.cbegin(), ep);
+                ins.remove_prefix(ep - ins.cbegin());
                 if (auto it = lutkwd.find(id); it != lutkwd.end()) {
                     return it->second;
                 } else {
@@ -310,9 +309,10 @@ struct ZFXParser {
         auto node = std::make_unique<AST>();
         node->token = Op::kSemicolon;
         while (1) if (auto p_stm = expr_binary()) {
-            while (1) if (auto p_op = next_op({Op::kSemicolon})) {
-                node->chs.push_back(std::move(p_stm));
-            } else break;
+            if (!next_op({Op::kSemicolon})) {
+                break;
+            }
+            node->chs.push_back(std::move(p_stm));
         } else break;
         rst.release();
         return node;
@@ -364,7 +364,7 @@ struct ZFXLower {
             [&] (Ident const &name) {
                 return IRSym{name};
             },
-            [&] (Op const &op) -> IRNode {
+            [&] (Op const &op) {
                 std::vector<IRId> chsid;
                 chsid.reserve(ast->chs.size());
                 for (auto const &chast: ast->chs) {
@@ -424,27 +424,26 @@ struct ZFXEmitter {
     std::vector<std::uint32_t> codes;
 
     static const inline std::map<Op, Bc> op2bc{
-        {Op::kAssign, Bc::kAssign},
-        {Op::kPlus, Bc::kPlusInt},
-        {Op::kMinus, Bc::kMinusInt},
-        {Op::kMultiply, Bc::kMultiplyInt},
-        {Op::kDivide, Bc::kDivideInt},
-        {Op::kModulus, Bc::kModulusInt},
-        {Op::kBitInverse, Bc::kBitInverseInt},
-        {Op::kBitAnd, Bc::kBitAndInt},
-        {Op::kBitOr, Bc::kBitOrInt},
-        {Op::kBitXor, Bc::kBitXorInt},
-        {Op::kBitShl, Bc::kBitShlInt},
-        {Op::kBitShr, Bc::kBitShrInt},
-        {Op::kLogicNot, Bc::kLogicNotInt},
-        {Op::kLogicAnd, Bc::kLogicAndInt},
-        {Op::kLogicOr, Bc::kLogicOrInt},
-        {Op::kCmpEqual, Bc::kCmpEqualInt},
-        {Op::kCmpNotEqual, Bc::kCmpNotEqualInt},
-        {Op::kCmpLessThan, Bc::kCmpLessThanInt},
-        {Op::kCmpLessEqual, Bc::kCmpLessEqualInt},
-        {Op::kCmpGreaterThan, Bc::kCmpGreaterThanInt},
-        {Op::kCmpGreaterEqual, Bc::kCmpGreaterEqualInt},
+        {Op::kPlus, Bc::kPlus},
+        {Op::kMinus, Bc::kMinus},
+        {Op::kMultiply, Bc::kMultiply},
+        {Op::kDivide, Bc::kDivide},
+        {Op::kModulus, Bc::kModulus},
+        {Op::kBitInverse, Bc::kBitInverse},
+        {Op::kBitAnd, Bc::kBitAnd},
+        {Op::kBitOr, Bc::kBitOr},
+        {Op::kBitXor, Bc::kBitXor},
+        {Op::kBitShl, Bc::kBitShl},
+        {Op::kBitShr, Bc::kBitShr},
+        {Op::kLogicNot, Bc::kLogicNot},
+        {Op::kLogicAnd, Bc::kLogicAnd},
+        {Op::kLogicOr, Bc::kLogicOr},
+        {Op::kCmpEqual, Bc::kCmpEqual},
+        {Op::kCmpNotEqual, Bc::kCmpNotEqual},
+        {Op::kCmpLessThan, Bc::kCmpLessThan},
+        {Op::kCmpLessEqual, Bc::kCmpLessEqual},
+        {Op::kCmpGreaterThan, Bc::kCmpGreaterThan},
+        {Op::kCmpGreaterEqual, Bc::kCmpGreaterEqual},
     };
 
     std::map<std::string, SymId> symlut;
@@ -485,12 +484,12 @@ struct ZFXEmitter {
         for (IRNode const &node: nodes) {
             overloaded{
                 [&] (IRConstInt const &ir) {
-                    emit_bc(Bc::kLoadConst);
+                    emit_bc(Bc::kLoadConstInt);
                     emit_reg(reglut.at(nodenr));
                     emit_int(ir.val);
                 },
                 [&] (IRConstFloat const &ir) {
-                    emit_bc(Bc::kLoadConst);
+                    emit_bc(Bc::kLoadConstFloat);
                     emit_reg(reglut.at(nodenr));
                     emit_float(ir.val);
                 },
@@ -501,6 +500,7 @@ struct ZFXEmitter {
                         for (auto const &a: ir.args) {
                             emit_reg(reglut.at(to_underlying(a)));
                         }
+                    } else if (ir.op == Op::kAssign) {
                     }
                 },
                 [&] (IRSym const &ir) {
@@ -540,7 +540,6 @@ ZFXCode::ZFXCode(std::string_view ins) {
     for (auto &[k, v]: emi.symlut) {
         syms[to_underlying(v)] = std::move(k);
     }
-    symtab.resize(syms.size());
 
     codes = std::move(emi.codes);
     nregs = sca.reglut.size();
