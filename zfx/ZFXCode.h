@@ -8,6 +8,12 @@
 
 namespace zeno::zfx {
 
+struct zfx_CompileOptions {
+
+};
+
+std::string zfx_compile(std::string_view source, size_t size, zfx_CompileOptions& options);
+
 struct ZFXCode {
     std::vector<std::string> syms;
     std::vector<std::uint32_t> codes;

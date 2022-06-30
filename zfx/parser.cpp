@@ -191,17 +191,22 @@ struct ZFXTokenizer {
     }
 };
 
+struct AstVisitor {
+
+};
 struct AST {
     Token token;
     std::vector<std::unique_ptr<AST>> chs;
+    //要不要搞一个访问者模式
+    std::any accept(AstVisitor& , std::string additional);
 };
-
+/*
 struct ZFXParser {
-    std::unique_ptr<AST> root;
+    std::unique_ptr<AST> root;//Ast还是用shared_ptr吧
     AST *curr{};
 
     explicit ZFXParser(span<Token> a_tokens) noexcept : tokens{a_tokens} {
-        root = std::make_unique<AST>();
+        root = std::make_unique<AST>();//可以看作是一个根节点
         curr = root.get();
     }
 
@@ -319,6 +324,19 @@ struct ZFXParser {
     }
 };
 
+*/
+/*
+//应该将next_token,next_op这些函数移动到scanner,Parser接收一个span<Tokens>， tokens都是完整解析好的
+struct ZFXParser {
+//parser出Ast节点
+    std::unique_ptr<Ast> root;//zfx程序的根节点
+    ZFXTokenizer &tokenizer;
+    ZFXParser(ZFXTokenizer &tokenizer) : tokenizer(tokenizer){
+
+    }
+};
+
+*/
 
 enum class IRId : std::uint32_t {};
 
