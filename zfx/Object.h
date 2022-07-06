@@ -6,7 +6,9 @@
 #include <string_view>
 #include "enumtools.h"
 #include "overloaded.h"
-
+/*
+ * Object是不是和lua中的LuaState差不多
+ * */
 namespace zeno::zfx {
 
 namespace object_details {

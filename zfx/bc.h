@@ -8,7 +8,10 @@
  *这里是zfx字节码的定义，builder 字节码的在另一个文件ByteCodeBuilder.h文件中
  * */
 namespace zeno::zfx {
-
+/*
+ * zfx 虚拟机的指令格式就暂时先参考lua op(指令) A B C(操作数)
+ * */
+//我想把OpCode大小设置为uin8_t，那这样指令Op A B C 总共为32字节
 enum class OpCode : std::uint32_t {
     kLoadConstInt,
     kLoadConstFloat,

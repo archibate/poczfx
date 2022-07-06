@@ -10,7 +10,9 @@
 #include "ZFXCode.h"
 #include "Object.h"
 #include "bc.h"
-
+/*
+ * zfx虚拟机字节码解释执行函数
+ * */
 namespace zeno::zfx {
 
 struct ZFXExec {
