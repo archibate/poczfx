@@ -12,7 +12,7 @@ namespace zeno::zfx {
  * zfx 虚拟机的指令格式就暂时先参考lua op(指令) A B C(操作数)
  * */
 //我想把OpCode大小设置为uin8_t，那这样指令Op A B C 总共为32字节
-enum class OpCode : std::uint32_t {
+enum class OpCode : std::uint8_t {
     kLoadConstInt,
     kLoadConstFloat,
     kAddrSymbol,
@@ -56,11 +56,17 @@ enum class OpCode : std::uint32_t {
         ZFX_MATH_ACOS,
         ZFX_MATH_ATAN,
         ZFX_MATH_EXP,
-        ZFX_MATH_
+        ZFX_MATH_LOG,
+        ZFX_MATH_FLOOR,
+        ZFX_MATH_CEIL,
+        ZFX_MATH_ATAN2,
+        ZFX_MATH_POW
     };
 
+    //定义一些有用的宏，用来获取op a, b, c
+    #define ZFX_INSN_0P(insn)
 
-    /*
-     * 从BCModule 生成字节码
-     * */
+    #define ZFX_INSN_A(insn)
+    #define ZFX_INSN_B(insn)
+    #deFINE ZFX_INSN_C(insn)
 }

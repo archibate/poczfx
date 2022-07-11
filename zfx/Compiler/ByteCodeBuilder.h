@@ -11,7 +11,7 @@ namespace zfx {
     class BytecodeEncoder {
     public:
         virtual ~BytecodeEncoder();
-        virtual std::uint32_t encodeOp() = 0;//
+        virtual std::uint8_t encodeOp(uint8_t op) = 0;//
     };
 
     class BytecodeBuilder {
@@ -63,6 +63,8 @@ namespace zfx {
         };
         struct Jump {
             //跳转指令
+            uint32_t source;
+            uint32_t target;
         };
 
         std::unordered_map<> constantMap;

@@ -22,11 +22,33 @@ using Zfx_Integer = int;
 
 //接下来是关于虚拟机栈的操作
 
+extern int zfx_absIndex();
 
+extern int zfx_getTop();
+
+extern void zfx_setTop();
+
+extern void zfx_pushValue();
+
+extern void zfx_remove();
+
+extern void zfx_insert();
+
+extern void zfx_replace();
+
+extern void zfx_checkStack();
 
 //留给Cpp语言调用zfx的接口
+extern void zfx_pushNil();
+
+//注意number是浮点数float
+extern void zfx_pushNumber();
+
+extern void zfx_pushInteger();
 
 //zfx函数的调用操作接口
 
 
 //加载和运行zfx函数
+
+extern void zfx_call();

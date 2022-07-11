@@ -13,7 +13,8 @@ int main() {
     lua_close();
 }
 ```
-
+我想把老板张发财中的`context `或者是`Executable`做成对应于`lua`中的`lua_State`
+其实就是维护一个全局的栈，保存zfx运行时的信息
 zfx 要不要支持字符串，如果支持字符串，我的想法是采用lua的做法，就是在虚拟机的全局数据区维护一张
 全局的map<>
 

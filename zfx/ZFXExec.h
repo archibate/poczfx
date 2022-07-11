@@ -14,7 +14,7 @@
  * zfx虚拟机字节码解释执行函数
  * */
 namespace zeno::zfx {
-
+/*
 struct ZFXExec {
     span<std::uint32_t const> codes;
     std::vector<Object> regtab;
@@ -85,5 +85,11 @@ struct ZFXExec {
         }
     }
 };
+*/
+
+static void zfx_execute(zfx_State* l) {
+    //接下来就是一串死循环
+
+}
 
 }
