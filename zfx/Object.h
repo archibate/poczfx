@@ -6,11 +6,20 @@
 #include <string_view>
 #include "enumtools.h"
 #include "overloaded.h"
-/*
- * Object是不是和lua中的LuaState差不多
- * */
+
 namespace zeno::zfx {
 
+#define setnvalue(obj, n) \
+{ \
+   Object* i_o = (obj)            \
+                                  \
+}
+
+#define setvvalue(obj, x, y, z, w) \
+{                                  \
+   Object* i_o = (obj);            \
+                                   \
+}
 namespace object_details {
 
 struct Object;
@@ -266,5 +275,7 @@ inline Object atan2(Object a, Object b) noexcept {
 }
 
 }
+    struct Proto {
 
+    };
 }
