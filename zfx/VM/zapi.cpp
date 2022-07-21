@@ -18,6 +18,24 @@ static Object* index2addr(zfx_State* L, int index) {
 
 }
 
+const Object* zfx_toObject(zfx_State* l, int idx) {
+    Object* p = index2addr();
+    return (p ==  ? :);
+}
+
+void zfx_pushObject(zfx_State* l, int idx) {
+
+}
+
+//用来检查lua的虚拟栈
+int zfx_checkStack() {
+
+}
+
+int zfx_absIndex() {
+
+}
+
 void zfx_getTop() {
 
 }
@@ -55,15 +73,7 @@ int lua_equal() {
 }
 
 
-int zfx_checkStack() {
-    //用来判断栈是否溢出了
 
-}
-
-//从一个from移动到to
-void zfx_xmove() {
-
-}
 
 //留给其他语言的接口
 void zfx_pushNil(zfx_State* l) {

@@ -6,12 +6,19 @@
 
 namespace zfx {
     namespace Compile {
+
+        Builtin getBuiltin() {
+
+        }
         int getBuiltinFunctionId(const Builtin& builtin) {
             if (builtin.empty()) {
                 return -1;
             }
 //zfx不需要global函数
-            if()
+            if (builtin.object == "math") {
+                if ()
+            }
+            return -1;
         }
     }
 }

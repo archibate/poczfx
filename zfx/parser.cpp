@@ -14,12 +14,14 @@
 #include <variant>
 #include <array>
 #include <map>
+#include <typeinfo>
+#include <any>
 
 namespace zeno::zfx {
 namespace {
 
 
-enum class Op {
+enum class Op : uint8_t {
     kAssign,
     kPlus,
     kMinus,
@@ -191,16 +193,38 @@ struct ZFXTokenizer {
     }
 };
 
-struct AstVisitor {
 
-};
 struct AST {
     Token token;
-    std::vector<std::unique_ptr<AST>> chs;
-    //要不要搞一个访问者模式
-    std::any accept(AstVisitor& , std::string additional);
+    std::vector<std::uniqueptr<AST>> chs;
 };
-/*
+
+//$
+struct AstParm : public AST {
+    std::string name;//同理如果是$F,那么string就是“F”，同理如果$有初始值的话那么也需要一个类型type和value
+    //同里在parser的visit时，我们也是调用一个构造函数来构造这一个节点
+    //一个Parm 和一个Sym ast节点有这么些内容 name 比如"clr" "pos" "F" 类型:vec3, int float, string 如果有初始值那么会加一个value
+};
+
+
+//@节点
+struct AstSym : public AST {
+    std::string name;//属性名字比如是clr的话就是“clr”,
+    //我们需要添加两个类型 @pos = vec3(3, 2, 1)，那么需要 一个type:三维，浮点，整数，字符串 string，然后一个value,value代表一个初始值
+    //最后我们在visit时候调用这个AST节点的构造函数
+};
+
+//整形字面量
+struct IntegerLiteral : public AST {
+    int value;//字面量数值
+    //构造函数
+};
+
+struct FloatLiteral : public AST {
+    float value;
+};
+
+
 struct ZFXParser {
     std::unique_ptr<AST> root;//Ast还是用shared_ptr吧
     AST *curr{};
@@ -236,6 +260,21 @@ struct ZFXParser {
         }
         return std::nullopt;
     }
+//拿解析变量说明一下,解析结果是Sym, Param两个节点
+    std::unique_ptr<AST> parseVariableDecl() {
+            //简单的伪代码描述一下
+            auto token = next_token();
+            if (token == "$" || token == "@") {
+                //在预读一个字符，把clr这种读出来赋值给name
+
+                //再判断一下是否有等于好
+                auto t = next_token();
+                if (t == "=") {
+                    //读出他的val 和type
+                    return std::make_shared<AST>();
+                }
+            }
+    }
 
     std::unique_ptr<AST> expr_atom() noexcept {
         if (token_eof())
@@ -244,20 +283,23 @@ struct ZFXParser {
         auto token = next_token();
         return overloaded{
         [&] (Ident const &ident) {
-            auto node = std::make_unique<AST>();
+            auto node = std::make_unique<ASTSym>();
             node->token = ident;
+            node->name = ident;
             rst.release();
             return node;
         },
         [&] (float const &val) {
-            auto node = std::make_unique<AST>();
+            auto node = std::make_unique<ASTFloat>();
             node->token = val;
+            node->value = val;
             rst.release();
             return node;
         },
         [&] (int const &val) {
-            auto node = std::make_unique<AST>();
+            auto node = std::make_unique<ASTInt>();
             node->token = val;
+            node->val = val;
             rst.release();
             return node;
         },
@@ -324,20 +366,7 @@ struct ZFXParser {
     }
 };
 
-*/
 /*
-//应该将next_token,next_op这些函数移动到scanner,Parser接收一个span<Tokens>， tokens都是完整解析好的
-struct ZFXParser {
-//parser出Ast节点
-    std::unique_ptr<Ast> root;//zfx程序的根节点
-    ZFXTokenizer &tokenizer;
-    ZFXParser(ZFXTokenizer &tokenizer) : tokenizer(tokenizer){
-
-    }
-};
-
-*/
-
 enum class IRId : std::uint32_t {};
 
 struct IREmpty {
@@ -371,8 +400,7 @@ using IRNode = std::variant
 , IROp
 , IRSym
 >;
-
-
+*/
 struct ZFXLower {
     std::vector<IRNode> nodes;
 
@@ -562,6 +590,78 @@ ZFXCode::ZFXCode(std::string_view ins) {
     codes = std::move(emi.codes);
     nregs = sca.reglut.size();
 }
+//一个模板函数
+template<typename T>
+bool isType(const std::any& a) {
+    return typeid(T) == a.type();
+}
+//实验性的字节码生成，目前只支持整数变量和浮点变量做加减, 如果遇到字符串那就直接加入常量池
+
+class BCModule {
+public:
+    std::vector<std::any> consts;
+    //后期可以将一些内置函数加入进来
+};
+class BCGenerator {
+
+    //我需要一个Modules,代表一个可执行的计算模块
+public:
+    std::shared_ptr<BCModule> m;
+
+    BCGenerator() {
+        this->m = std::make_shared<Module>();
+    }
+
+    //有一个转换函数，将任何std::any 转换成uin8_t的opcode数组
+    std::vector<uint8_t> anyToCode(const std::any& val) {
+        if (val.has_value() && isType<std::vector<std::uint8_t>>(val)) {
+            return std::any_cast<std::vector<uint8_t>>(val);
+        }
+        return {};
+    }
+
+    //拼接一下代码
+    void concatCodeWithAny(std::vector<uint8_t>& code, const std::any& val) {
+        if (val.has_value() && isType<std::vector<uint8_t>>(val)) {
+            auto vec = std::any_cast<std::vector<uint8_t>>(val);
+            code.insert(code.end(), vec.begin(), vec.end());
+        }
+        return;
+    }
+
+    //开始访问,目前先访问整形，浮点型，二元运算节点
+    std::any visitInt() {
+        std::vector<uint8_t> code;
+
+        return code;
+    }
+
+    std::any visitFloat() {
+
+    }
+
+    std::any visitBinary(Binary& bi) {
+        std::vector<uint8_t> code;
+        //bi
+
+        if ()
+        return code;
+    }
+
+    std::any visitUnary() {
+
+    }
+
+    std::any visitFunctionCall() {
+        //给调用(sin, cos, ...)函数生成字节码
+        //首先生成函数参数的字节码
+        std::vector<uint8_t> code;
+
+        return code;
+    }
+
+    std::any visitIfStatement()
+};
 
 
 }

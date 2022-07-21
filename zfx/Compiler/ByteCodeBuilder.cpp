@@ -10,10 +10,14 @@
 namespace zfx {
 
 
-    //写一个函数返回字节码长度,因为我们的OpCode是继承自std::u32的所以是四字节
+    //写一个函数返回字节码长度,我们指令是32个字节
 
-    static int OpCodeLength = 4;
-
+    static int getOpLength(OpCode op) {
+        switch(op) {
+            case:
+        }
+        return 1;
+    }
     static writeDouble(std::string& ss, double value) {
         ss.append(reinterpret_cast<const char*>(&value), sizeof (value));
     }
@@ -51,7 +55,20 @@ namespace zfx {
         //uint32_t id = ()
     }
 
-    void emitABC(Opcode op, uint8_t a, uint8_t b, uint8_t c) {
+    void BytecodeBuilder::emitABC(Opcode op, uint8_t a, uint8_t b, uint8_t c) {
+            uint32_t insn = ;//指令
+            insns.push_back(insn);
+    }
+
+    void BytecodeBuilder::emitAD(OpCode op, uint8_t a, uint16_t d) {
 
     }
+
+    for (size_t i = 0; i < insns.size();) {
+        uint32_t  insn = insns[i];
+        //取出指令
+    }
+
+private:
+    std::vector<uint32_t> insns;
 }

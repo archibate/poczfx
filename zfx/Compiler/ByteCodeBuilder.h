@@ -40,6 +40,9 @@ namespace zfx {
 
         void emitABC(Opcode op, uint8_t a, uint8_t b, uint8_t c);
 
+        void emitAD(OpCoden op, uint8_t a, uint16_t d);
+
+
 
     private:
         //这些都是zfx中的常量

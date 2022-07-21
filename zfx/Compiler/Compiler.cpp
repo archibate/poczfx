@@ -14,15 +14,18 @@ namespace zfx {
 
     struct Compiler {
         struct RegScope;
-        Compiler() {
-/*
- *
- * */
+        Compiler(BytecodeBuilder& bytecode, const ) {
+//使用列表初始化，初始化一些局部变量
         }
         //得到局部变量的寄存器
         int getLocalReg() {
 
         }
+
+        void emitLoadK() {
+            //bytecode.emit()
+        }
+
 
         bool canInlineFunctionBody() {
             //判断是否可以inline函数题
@@ -47,7 +50,15 @@ namespace zfx {
 
         };
 
-        BytecodeBuilder& ByteCode;
+        BytecodeBuilder& bytecode;
+        std::unordered_map<> locals;
+        std::unordered_map<> globals;
+        std::unordered_map<> variablse
+        std::unordered_map<> constansts;
+        std::unordered_map<> lconstansts;
+
+        unsigned int regTop = 0;
+        unsigned int stacksize = 0;
 
 
     };
