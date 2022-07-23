@@ -275,7 +275,14 @@ struct ZFXParser {
                 }
             }
     }
+// 解析二元表达式采用运算符优先级算法， 比如 @pos + $c * 5,那么 + 运算符优先级小于 * 所以先计算 $c * 5
+//原理就是 :@pos 后面跟了个 + 号所以肯定是一个加法表达式 继续往后遍历， 遇到 $c ，我们再往后看一看后面的运算符如果优先级大于前面的就
+//解析赋值表达式
+//解析一元运算符号，注意是前缀还是后缀
 
+    std::shared_ptr<AST> parse() {
+    //一元运算符其实很简单，就是
+    }
     std::unique_ptr<AST> expr_atom() noexcept {
         if (token_eof())
             return nullptr;
@@ -590,12 +597,16 @@ ZFXCode::ZFXCode(std::string_view ins) {
     codes = std::move(emi.codes);
     nregs = sca.reglut.size();
 }
+
+
+#if 0
+//实验性的字节码生成程序
 //一个模板函数
 template<typename T>
 bool isType(const std::any& a) {
     return typeid(T) == a.type();
 }
-//实验性的字节码生成，目前只支持整数变量和浮点变量做加减, 如果遇到字符串那就直接加入常量池
+//实验性的字节码生成，目前只支持整数变量和浮点变量做加减, 如果遇到字符串和浮点数那就直接加入常量池
 
 class BCModule {
 public:
@@ -604,7 +615,7 @@ public:
 };
 class BCGenerator {
 
-    //我需要一个Modules,代表一个可执行的计算模块
+    //需要一个Modules,代表一个可执行的计算模块
 public:
     std::shared_ptr<BCModule> m;
 
@@ -632,25 +643,66 @@ public:
     //开始访问,目前先访问整形，浮点型，二元运算节点
     std::any visitInt() {
         std::vector<uint8_t> code;
-
+        code.push_back(kLoad);
+        code.push_back(value);
         return code;
     }
 
     std::any visitFloat() {
-
+//考虑到float没法转成uin8_t,就是把浮点数放到常量池中去,code中加入取值指令和下标
+    //code.push_back();
+    //code.push_back();//加载指令
     }
 
     std::any visitBinary(Binary& bi) {
         std::vector<uint8_t> code;
         //bi
+//auto ret1;访问左子树代码
+//auto ret2;访问右子树代码
+//注意访问二元运算符的时候。我们不处理赋值运算
+//拼接完ret1 和 ret2后再拼接opcode
+        switch(OpCode) {
+            case :
+                if () {
+            //如果是加运算符，那么需要盘点一些类型是否是string， string + 和number + 是两条指令
+                }
+            //接下来是各种二元指令运算，唯一要注意的是如果是<= < >= > != == 这种二元运算指令，我们需要引入一个临时变量
 
-        if ()
+        }
         return code;
     }
 
-    std::any visitUnary() {
+     std::any visitUnary() {
+//解析一元运算符也很简单
+    }
+
+    //生成获取本地变量值的指令
+     std::vector<uint8_t> getVariableValue() {
+        //逻辑很简单，就是生成一个load指令和一个变量数组的下标
+    }
+
+    std::vector<uint8_t> setVariableValue() {
+        //和get相反我们生成一个store指令
+    }
+
+     //计算条件语句产生的偏移量
+     void addOfferToJumpOp() {
 
     }
+
+    std::vector<uint8_t> visitIfStatement() {
+
+    }
+
+    std::vector<uint8_t> visitForStatement() {
+
+    }
+
+    std::any visitString () {
+        //直接将字符串加入到常量池中去
+        this->m->consts.push_back();
+    }
+
 
     std::any visitFunctionCall() {
         //给调用(sin, cos, ...)函数生成字节码
@@ -659,9 +711,54 @@ public:
 
         return code;
     }
+/*
+ * 虚拟机执行函数调用的时候，设置一个返回地址，当函数return时,会回到这一个位置，为被调用的函数创建一个新的栈帧，加入到调用栈中
+ * 从操作数栈中取出函数的值， 赋值给新的栈帧，也就是说加入到了函数栈中的本地变量了， 将代码切换到被调用函数的代码中，并把代码计数器设置为0
+ * 函数返回的操作是这样的，如果有返回值的话那么就直接从当前操作数栈中取出来，加载到上一级操作数栈中去，
+ * 从调用栈中弹出当前当前函数栈
+ * 将代码切换到调用者的代码， 并且把代码指针指向下一个
+ * 一些sin,cos之类的函数，不需要生成在字节码文件里，把他当作内置函数直接调用即可
+ * */
 
-    std::any visitIfStatement()
+/*
+ * 伺候if for等条件和循环语句
+ * if的话，首先字节码需要支持一些if指令
+ * 先生成条件指令 if块的代码， else块的代码，再计算偏移量
+ * */
+
+
 };
 
+#endif
+    class VMStackFrame {
+        //对应的函数
+        // std::shared_ptr<> function;
+        //返回地址
+        //uint32_t returnIndex = 0;
+        //操作数栈
+        //std::vector<std::any> oprandStack;
+        //
+    };
 
+    class VM {
+    public:
+        std::vector<std::shared_ptr<VMStackFrame>> callStack;//调用栈
+
+        //创建栈帧其实就是将当前函数的栈帧加入到调用栈帧中
+        //auto frame = std::make_shared<VMStackFrame>();
+        //this->callStack.push_back(frame);
+        //判断一下当前函数栈帧是否有bytecode
+        //std::vector<uint8_t> code;
+        /*
+        if() {
+            this->code = frame->bytecode
+        }
+        */
+
+        while (true) {
+            switch(opcode) {
+
+            }
+        }
+    };
 }
