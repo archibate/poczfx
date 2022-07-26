@@ -135,6 +135,32 @@ struct ZFXTokenizer {
         {"return", Op::kKeywordReturn},
     };
 
+    //为了解决二元运算符的左递归问题，我们需要引入一个运算符优先级map
+    std::map<Op, int32_t> OpRec {
+            {Op::kAssign, 2},//=
+            {Op::kPlusAssign, 2},//+=
+            {Op::kMinusAssign, 2}, // -=
+            {Op::kDivideAssign, 2}, // /=
+            {Op::kModulusAssign, 2}, //  %=
+            {Op::kBitAndAssign, 2}, // &=
+            {Op::kBitXorAssign, 2},  // ^=
+            {Op::kBitOrAssign, 2}, // |=
+            {Op::kLogicOr, 4},  //  ||
+            {Op::kLogicAnd, 5}, // &&
+            {Op::kBitOr, 6}, // |
+            {Op::kBitOr, 7}, // ^
+            {Op::kBitAnd, 8}, // &
+            {Op::kCmpEqual, 9}, // ==
+            {Op::kCmpNotEqual, 9}, // !=
+            {Op::kCmpGreaterThan, 10}, // >
+            {Op::kCmpGreaterEqual, 10}, // >=
+            {Op::kCmpLessThan, 10}, // <
+            {Op::kCmpLessEqual, 10}, // <=
+            {Op::kPlus, 11}, // +
+            {Op::kMinus, 11}, // -
+            {Op::kMultiply,12}, // *
+            {Op::kDivide,12}, // /
+    };
     static bool isident(char c) noexcept {
         return std::isalnum(c) || c == '_' || c == '$' || c == '@';
     }
@@ -224,6 +250,10 @@ struct FloatLiteral : public AST {
     float value;
 };
 
+struct StringLiteral : public AST {
+
+};
+
 
 struct ZFXParser {
     std::unique_ptr<AST> root;//Ast还是用shared_ptr吧
@@ -270,7 +300,7 @@ struct ZFXParser {
                 //再判断一下是否有等于好
                 auto t = next_token();
                 if (t == "=") {
-                    //读出他的val 和type
+                    //读出他的val 和type构造这一个节点
                     return std::make_shared<AST>();
                 }
             }
@@ -280,8 +310,11 @@ struct ZFXParser {
 //解析赋值表达式
 //解析一元运算符号，注意是前缀还是后缀
 
-    std::shared_ptr<AST> parse() {
-    //一元运算符其实很简单，就是
+    std::shared_ptr<AST> parseUnary() {
+    //一元表达式有以下三种情况，一个是前缀一元表达式就是 +@a这种， 另外一种是后缀++ -- a++ a--这种
+    //递归解析
+    //先解析前置一元情况，伪代码，前端要改一下
+    //
     }
     std::unique_ptr<AST> expr_atom() noexcept {
         if (token_eof())
@@ -648,6 +681,12 @@ public:
         return code;
     }
 
+    std::any visitVariableDecl() {
+        //为变量生成字节码，目前只有$ @两种变量
+        std::vector<uint8_t> code;
+//逻辑很简单，就是看一下变量是否有初始化，如果有就生成变量赋值的指令
+        return code;
+    }
     std::any visitFloat() {
 //考虑到float没法转成uin8_t,就是把浮点数放到常量池中去,code中加入取值指令和下标
     //code.push_back();
@@ -705,11 +744,15 @@ public:
 
 
     std::any visitFunctionCall() {
-        //给调用(sin, cos, ...)函数生成字节码
-        //首先生成函数参数的字节码
+        //这里所说的函数调用不包括sin,cos，tan这些内置函数，而是用户自定义函数，实验性质
         std::vector<uint8_t> code;
-
+        //首先将函数参数压入栈中
+        //查找本地变量的下标
         return code;
+    }
+
+    std::any visitReturnStatement() {
+        //为了伺候函数返回语句
     }
 /*
  * 虚拟机执行函数调用的时候，设置一个返回地址，当函数return时,会回到这一个位置，为被调用的函数创建一个新的栈帧，加入到调用栈中
