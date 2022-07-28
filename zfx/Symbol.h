@@ -10,7 +10,7 @@
 class Symbol {
 public:
 //有这么几个参数
-    std::string name;
+    std::string name;//变量名，@clr的话 name = clr
 
 };
 

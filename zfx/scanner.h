@@ -149,9 +149,103 @@ namespace zeno::zfx {
                 } else if (ch == '"') {
                     //开始解析字符串
                     return this->parseStringLiteral();
-                } else if () {
+                } else if (this->isDigit(ch)) {
                     //解析数字字面量
+                    this->stream.next();//再预读一个字符
+                    auto ch1 = this->stream.peek();
+                    std::string literal = "";
+                    if (ch == '0') {
+                        //不支持八进制，二进制，十六进制
+                        if (!(ch1 >= '1' && ch1 <= '9')) {
+                            //先取零
+                            literal += '0'
+                        } else {
+                            std::cout << "0 cannot be followed bu other digit now" << std::endl;
+                            //先跳过去再解析token
+                            this->strem.next();
+                            return this->getAToken();
+                        }
+                    } else if(ch >= '1' && ch <= '9') {
+                        literal += ch;
+                        while(this->isDigit(ch1)) {
+                            ch = this->stream.next();
+                            literal += ch;
+                            ch1 = this->stream.peek();
+                        }
+                    }
+                    if (ch1 == '.') {
+                        //解析浮点数, 加上小数字面量
+                        literal += '.';
+                        this->strem.next();
+                        ch1 = this->stream.peek();
+                        while (this->isDigit(ch1)) {
+                            ch = this->stream.next();
+                            literal += ch;
+                            ch1 = this->stream.peek();
+                        }
+                        //return
+                    } else {
+                        //return 一个整形字面量
+                    }
+                } else if (ch == '.') {
 
+                } else if (ch == '/') {
+                    this->stream.next();
+                    auto ch1 = this->stream.peek();
+                    if (ch1 == '=') {
+                        this->stream.next();
+
+                        //return /= 这样一个 token
+                    } else {
+                        //如果都不是
+                        //return 这 / 个Token
+                    }
+                } else if (ch == '+') {
+                    this->stream.next();
+                    auto ch1 = this->stream.peek();
+                    if (ch1 == '+') {
+                        this->stream.next();
+
+                        //return token ++;
+                    } else if (ch1 == '=') {
+                        this->stream.next();
+                        //return token +=;
+                    } else {
+                        //如果都不是，那就返回+
+                        //return token +;
+                    }
+                } else if(ch == '-') {
+                    this->stream.next();
+                    auto ch1 = this->stream.peek();
+                    if (ch1 == '-') {
+                        this->stream.next();
+                        //return token ++;
+                    } else if (ch1 == '=') {
+                        this->stream.next();
+                        //return token -=;
+                    } else {
+                        //return token -;
+                    }
+                } else if (ch == '*') {
+                    this->stream.next();
+                    auto ch1 = this->stream.peek();
+                    if (ch1 == '=') {
+                        this->stream.next();
+                        //return token *=
+                    } else {
+                        //return *
+                    }
+                } else if (ch == '%') {
+                    this->stream.next();
+                    auto ch1 = this->stream.peek();
+                    if (ch1 == '=') {
+                        this->stream.next();
+                        //return token %=
+                    } else {
+                        //return token %
+                    }
+                } else if (ch == '>') {
+                    this->stream.next();
                 }
             }
         }
@@ -160,6 +254,9 @@ namespace zeno::zfx {
             return std::isalnum(c) || c == '_' || c == '$' || c == '@';
         }
 
+        bool isDigit(char ch) {
+            return (ch >= '0' && ch <= '9');
+        }
         Token parseStringLiteral() {
             //直接去掉第一个字符,因为上面已经判断了ch == '"'
             Token token();

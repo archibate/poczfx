@@ -177,43 +177,12 @@ struct ZFXParser {
         rst.release();
         return node;
     }
+private:
+    static std::map<Op, int32_t> opRec;//为了伺候二元运算符左递归问题
 };
 
-/*
-enum class IRId : std::uint32_t {};
+std::map<Op, int32_t> ZFXTokenizer::opRec {};
 
-struct IREmpty {
-};
-
-struct IRBlock {
-    std::vector<IRId> stmts;
-};
-
-struct IROp {
-    Op op;
-    std::vector<IRId> args;
-};
-
-struct IRSym {
-    std::string name;
-};
-
-struct IRConstFloat {
-    float val;
-};
-
-struct IRConstInt {
-    int val;
-};
-
-using IRNode = std::variant
-< IREmpty
-, IRConstInt
-, IRConstFloat
-, IROp
-, IRSym
->;
-*/
 struct ZFXLower {
     std::vector<IRNode> nodes;
 
