@@ -1,3 +1,4 @@
+#include "scanner.h"
 #include "ZFXCode.h"
 #include "bc.h"
 #include <vector>
@@ -21,251 +22,23 @@ namespace zeno::zfx {
 namespace {
 
 
-enum class Op : uint8_t {
-    kAssign,
-    kPlus,
-    kMinus,
-    kMultiply,
-    kDivide,
-    kModulus,
-    kPlusAssign,
-    kMinusAssign,
-    kMultiplyAssign,
-    kDivideAssign,
-    kModulusAssign,
-    kBitAndAssign,
-    kBitOrAssign,
-    kBitXorAssign,
-    kMember,
-    kBitInverse,
-    kBitAnd,
-    kBitOr,
-    kBitXor,
-    kBitShl,
-    kBitShr,
-    kLogicNot,
-    kLogicAnd,
-    kLogicOr,
-    kCmpEqual,
-    kCmpNotEqual,
-    kCmpLessThan,
-    kCmpLessEqual,
-    kCmpGreaterThan,
-    kCmpGreaterEqual,
-    kLeftBrace,
-    kRightBrace,
-    kLeftBracket,
-    kRightBracket,
-    kLeftBlock,
-    kRightBlock,
-    kTernary,
-    kTernaryElse,
-    kComma,
-    kSemicolon,
-    kKeywordIf,
-    kKeywordElse,
-    kKeywordFor,
-    kKeywordWhile,
-    kKeywordReturn,
-};
-
-using Ident = std::string;
-using Token = std::variant<Op, Ident, float, int>;
-
-
-struct ZFXTokenizer {
-    std::vector<Token> tokens;
-
-    static const inline std::map<char, Op> lut1{
-        {'=', Op::kAssign},
-        {'+', Op::kPlus},
-        {'-', Op::kMinus},
-        {'*', Op::kMultiply},
-        {'/', Op::kDivide},
-        {'%', Op::kModulus},
-        {'.', Op::kMember},
-        {'~', Op::kBitInverse},
-        {'&', Op::kBitAnd},
-        {'|', Op::kBitOr},
-        {'^', Op::kBitXor},
-        {'<', Op::kCmpLessThan},
-        {'>', Op::kCmpGreaterThan},
-        {'!', Op::kLogicNot},
-        {'(', Op::kLeftBrace},
-        {')', Op::kRightBrace},
-        {'[', Op::kLeftBracket},
-        {']', Op::kRightBracket},
-        {'{', Op::kLeftBlock},
-        {'}', Op::kRightBlock},
-        {'?', Op::kTernary},
-        {':', Op::kTernaryElse},
-        {',', Op::kComma},
-        {';', Op::kSemicolon},
-    };
-
-    static const inline std::map<std::tuple<char, char>, Op> lut2{
-        {{'&', '&'}, Op::kLogicAnd},
-        {{'|', '|'}, Op::kLogicOr},
-        {{'=', '='}, Op::kCmpEqual},
-        {{'!', '='}, Op::kCmpNotEqual},
-        {{'<', '='}, Op::kCmpLessEqual},
-        {{'>', '='}, Op::kCmpGreaterEqual},
-        {{'<', '<'}, Op::kBitShl},
-        {{'>', '>'}, Op::kBitShr},
-        {{'+', '='}, Op::kPlusAssign},
-        {{'-', '='}, Op::kMinusAssign},
-        {{'*', '='}, Op::kMultiplyAssign},
-        {{'/', '='}, Op::kDivideAssign},
-        {{'%', '='}, Op::kModulusAssign},
-        {{'&', '='}, Op::kBitAndAssign},
-        {{'^', '='}, Op::kBitXorAssign},
-        {{'|', '='}, Op::kBitOrAssign},
-    };
-
-    //static const inline std::map<std::tuple<char, char, char>, Op> lut3{
-        //{{'<', '<', '='}, Op::kBitShlAssign},
-        //{{'>', '>', '='}, Op::kBitShrAssign},
-    //};
-
-    static const inline std::map<std::string, Op> lutkwd{
-        {"if", Op::kKeywordIf},
-        {"else", Op::kKeywordElse},
-        {"for", Op::kKeywordFor},
-        {"while", Op::kKeywordWhile},
-        {"return", Op::kKeywordReturn},
-    };
-
-    //为了解决二元运算符的左递归问题，我们需要引入一个运算符优先级map
-    std::map<Op, int32_t> OpRec {
-            {Op::kAssign, 2},//=
-            {Op::kPlusAssign, 2},//+=
-            {Op::kMinusAssign, 2}, // -=
-            {Op::kDivideAssign, 2}, // /=
-            {Op::kModulusAssign, 2}, //  %=
-            {Op::kBitAndAssign, 2}, // &=
-            {Op::kBitXorAssign, 2},  // ^=
-            {Op::kBitOrAssign, 2}, // |=
-            {Op::kLogicOr, 4},  //  ||
-            {Op::kLogicAnd, 5}, // &&
-            {Op::kBitOr, 6}, // |
-            {Op::kBitOr, 7}, // ^
-            {Op::kBitAnd, 8}, // &
-            {Op::kCmpEqual, 9}, // ==
-            {Op::kCmpNotEqual, 9}, // !=
-            {Op::kCmpGreaterThan, 10}, // >
-            {Op::kCmpGreaterEqual, 10}, // >=
-            {Op::kCmpLessThan, 10}, // <
-            {Op::kCmpLessEqual, 10}, // <=
-            {Op::kPlus, 11}, // +
-            {Op::kMinus, 11}, // -
-            {Op::kMultiply,12}, // *
-            {Op::kDivide,12}, // /
-    };
-    static bool isident(char c) noexcept {
-        return std::isalnum(c) || c == '_' || c == '$' || c == '@';
-    }
-
-    std::optional<Token> take(std::string_view &ins) noexcept {
-        if (ins.size() >= 1) {
-            if (std::isdigit(ins[0]) || (ins[0] == '.' && ins.size() >= 2 && std::isdigit(ins[1]))) {
-                auto ep = std::find_if_not(ins.cbegin() + 1, ins.cend(), [] (char c) {
-                    return std::isdigit(c) || c == '.';
-                });
-                std::string id(ins.cbegin(), ep);
-                ins.remove_prefix(ep - ins.cbegin());
-                if (id.find_first_of('.') != std::string::npos) {
-                    return std::stof(id);
-                } else {
-                    return std::stoi(id);
-                }
-            } else if (isident(ins[0])) {
-                auto ep = std::find_if_not(ins.cbegin() + 1, ins.cend(), [] (char c) {
-                    return isident(c);
-                });
-                std::string id(ins.cbegin(), ep);
-                ins.remove_prefix(ep - ins.cbegin());
-                if (auto it = lutkwd.find(id); it != lutkwd.end()) {
-                    return it->second;
-                } else {
-                    return id;
-                }
-            }
-        }
-        if (ins.size() >= 2) {
-            auto it = lut2.find({ins[0], ins[1]});
-            if (it != lut2.end()) {
-                ins.remove_prefix(2);
-                return it->second;
-            }
-        }
-        if (ins.size() >= 1) {
-            auto it = lut1.find(ins[0]);
-            if (it != lut1.end()) {
-                ins.remove_prefix(1);
-                return it->second;
-            }
-        }
-        return std::nullopt;
-    }
-
-    void tokenize(std::string_view ins) noexcept {
-        while (!ins.empty()) {
-            if (auto t = take(ins)) {
-                tokens.push_back(std::move(*t));
-            } else {
-                break;
-            }
-        }
-    }
-};
-
-
-struct AST {
-    Token token;
-    std::vector<std::uniqueptr<AST>> chs;
-};
-
-//$
-struct AstParm : public AST {
-    std::string name;//同理如果是$F,那么string就是“F”，同理如果$有初始值的话那么也需要一个类型type和value
-    //同里在parser的visit时，我们也是调用一个构造函数来构造这一个节点
-    //一个Parm 和一个Sym ast节点有这么些内容 name 比如"clr" "pos" "F" 类型:vec3, int float, string 如果有初始值那么会加一个value
-};
-
-
-//@节点
-struct AstSym : public AST {
-    std::string name;//属性名字比如是clr的话就是“clr”,
-    //我们需要添加两个类型 @pos = vec3(3, 2, 1)，那么需要 一个type:三维，浮点，整数，字符串 string，然后一个value,value代表一个初始值
-    //最后我们在visit时候调用这个AST节点的构造函数
-};
-
-//整形字面量
-struct IntegerLiteral : public AST {
-    int value;//字面量数值
-    //构造函数
-};
-
-struct FloatLiteral : public AST {
-    float value;
-};
-
-struct StringLiteral : public AST {
-
-};
-
-
 struct ZFXParser {
-    std::unique_ptr<AST> root;//Ast还是用shared_ptr吧
+    std::unique_ptr<AST> root;
     AST *curr{};
 
+    /*
     explicit ZFXParser(span<Token> a_tokens) noexcept : tokens{a_tokens} {
         root = std::make_unique<AST>();//可以看作是一个根节点
         curr = root.get();
     }
+*/
+    ZFXTokenizer &tokenizer;
+    //span<Token> tokens;
+    ZFXParser(ZFXTokenizer &tokenizer) : tokenizer(tokenizer) {
 
-    span<Token> tokens;
+    }
 
+    //接下来时就是根据scanner的next获取token来解析成ast
     Token next_token() noexcept {
         auto token = std::move(tokens.front());
         tokens.remove_prefix(1);
