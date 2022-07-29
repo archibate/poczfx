@@ -18,6 +18,9 @@
 #include <typeinfo>
 #include <any>
 
+/*
+ * variableDecl : '@'|'$' Identifier
+ * */
 namespace zeno::zfx {
 namespace {
 
@@ -39,6 +42,7 @@ struct ZFXParser {
     }
 
     //接下来时就是根据scanner的next获取token来解析成ast
+    /*
     Token next_token() noexcept {
         auto token = std::move(tokens.front());
         tokens.remove_prefix(1);
@@ -63,10 +67,50 @@ struct ZFXParser {
         }
         return std::nullopt;
     }
+     */
+    //prog是每一段zfx程序的根节点，也就是root节点
+    //parse ast 整个的流程是 parseProg -> ParseStatementList ->ParseStatement
+    std::shared_ptr<AST> parseProg() {
+        auto stmts = this->parseStatementList();
+
+        //return Prog
+    }
+
+    std::vector<std::shared_ptr<AST>> parseStatementList() {
+        std::vector<std::shared_ptr<AST>> stmts;
+        auto t = this->tokenizer.peek();//先预读一个token;
+        while() {
+            //只要我的
+            auto stmt = this->parseStatement();
+            stmts.push_back(stmt);//插入一个ast节点
+        }
+        return stmts;
+    }
+
+    std::shared_ptr<AST> parseStatement() {
+        auto t = this->scanner.peek();
+        if () {
+
+        } else if() {
+
+        } else if() {
+
+        } else if() {
+
+        } else {
+            //解析出来一个无效的ast
+        }
+    }
 //拿解析变量说明一下,解析结果是Sym, Param两个节点
     std::unique_ptr<AST> parseVariableDecl() {
             //简单的伪代码描述一下
-            auto token = next_token();
+            this->tokenizer.next();//跳过$ 和 @因为在调用者那已经判断过了我们只需要取出变量名
+            if () {
+
+            } else {
+                std::cout << "Error parsing type annotation in VariableDecl" << std::endl;
+            }
+            /*
             if (token == "$" || token == "@") {
                 //在预读一个字符，把clr这种读出来赋值给name
 
@@ -77,6 +121,7 @@ struct ZFXParser {
                     return std::make_shared<AST>();
                 }
             }
+             */
     }
 // 解析二元表达式采用运算符优先级算法， 比如 @pos + $c * 5,那么 + 运算符优先级小于 * 所以先计算 $c * 5
 //原理就是 :@pos 后面跟了个 + 号所以肯定是一个加法表达式 继续往后遍历， 遇到 $c ，我们再往后看一看后面的运算符如果优先级大于前面的就

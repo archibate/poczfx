@@ -10,6 +10,13 @@ namespace zeno::zfx {
         std::vector<std::uniqueptr<AST>> chs;
     };
 
+    class AstVisitor {
+    public:
+        //对抽象类的访问
+        //对于相应的具体类，会调用visitor合适的具体方法
+        virtual std::any visit(Ast &node);
+    };
+
 //$
     struct AstParm : public AST {
         std::string name;//同理如果是$F,那么string就是“F”，同理如果$有初始值的话那么也需要一个类型type和value
@@ -27,7 +34,8 @@ namespace zeno::zfx {
 
 //整形字面量
     struct IntegerLiteral : public AST {
-        int value;//字面量数值
+        int32_t value;//字面量数值
+        //类型
         //构造函数
     };
 
@@ -38,7 +46,15 @@ namespace zeno::zfx {
 
     //字符串
     struct StringLiteral : public AST {
+        std::string value;
 
     };
 
+    struct Binary : public AST {
+
+    };
+
+    struct Unary : public AST {
+
+    };
 }

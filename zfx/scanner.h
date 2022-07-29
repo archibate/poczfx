@@ -246,6 +246,130 @@ namespace zeno::zfx {
                     }
                 } else if (ch == '>') {
                     this->stream.next();
+                    auto ch1 = this->stream.peek();
+                    if (ch1 == '>') {
+                        this->stream.next();
+                        ch1 = this->stream.peek();
+                    } else if (ch1 == '=') {
+                        this->stream.next();
+
+                    }
+                } else if (ch == '<') {
+                 this->stream.next();
+                 auto ch1 = this->stream.peek();
+                 if (ch1 == '=') {
+                     this->stream.next();
+                     //return token <=;
+                 } else if(ch1 == '<') {
+                     this->stream.next();
+                     ch1 = this->stream.peek();
+                     if (ch1 == '=') {
+                         this->stream.next();
+                         //return token <<=
+                     } else {
+                         //return token <<
+                     }
+                 }
+                } else if(ch == '=') {
+                    this->stream.next();
+                    auto ch1 = this->stream.peek();
+                    if (ch1 == '=') {
+                        this->stream.next();
+                        ch1 = this->stream.peek();
+
+                    }
+                } else if(ch == '!') {
+                    this->stream.next();
+                    auto ch1 = this->stream.peek();
+                    if (ch1 == '=') {
+                        this->stream.next();
+                        ch1 = this->stream.peek();
+                        if (ch1 == '=') {
+                            this->stream.next();
+                            //return token !==
+                        } else {
+                            //return ！=
+                        }
+                    } else {
+                        //return token !;
+                    }
+                } else if (ch == '|'){
+                    this->stream.next();
+                    auto ch1 = this->stream.peek();
+                    if (ch1 == '|') {
+                        this->stream.next();
+                        //return  ||
+                    } else if (ch1 == '=') {
+                        this->stream.next();
+                        //return |=
+                    } else {
+                        //return token |
+                    }
+                } else if(ch == '&') {
+                    this->stream.next();
+                    auto ch1 = this->stream.peek();
+                    if (ch1 == '&') {
+                         this->stream.next();
+                         //return &&；
+                    } else if(ch1 == '=') {
+                        this->stream.next();
+                        //return &=;
+                    } else {
+                        //return token &
+                    }
+                } else if(ch == '^') {
+                    this->stream.next();
+                    auto ch1 = this->stream.peek();
+                    if (ch1 == '=') {
+                        this->stream.next();
+                        //return token ^=
+                    } else {
+                        //return token ^
+                    }
+                } else if (ch == '~') {
+                    this->stream.next();
+                    //return token ~
+                } else if(ch == '(') {
+                    this->stream.next();
+                    //return token (
+                } else if(ch == ')') {
+                    this->stream.next();
+                    //return token )
+                } else if(ch == '{') {
+                    this->stream.next();
+                    //return token {
+                } else if(ch == '}') {
+                    this->stream.next();
+                    //return }
+                } else if(ch == '[') {
+                    this->stream.next();
+                    //return token [
+                } else if(ch == ']') {
+                    this->stream.next();
+                    //return token [
+                } else if (ch == ':') {
+                    this->stream.next();
+                    //return token :
+                } else if(ch == ';') {
+                    this->stream.next();
+                    //return token ;
+                } else if(ch == ',') {
+                    this->stream.next();
+                    //return token ,
+                } else if(ch == '?') {
+                    this->stream.next();
+                    //return token ?
+                } else if(ch == '@') {
+                    this->stream.next();
+                    //return token @
+                } else if(ch == '$') {
+                    this->stream.next();
+                    //return token $
+                } else {
+                    //识别到错误字符
+                    std::cout << "Unrecognized pattern meeting" << std::endl;
+                    this->stream.next();
+                    return this->getAToken();
                 }
             }
         }
