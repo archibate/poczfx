@@ -9,7 +9,8 @@
 #include <variant>
 #include <optional>
 #include <string_view>
-
+#include <set>
+#include <any>
 
 namespace zeno::zfx {
     enum class Op {
@@ -61,18 +62,31 @@ namespace zeno::zfx {
     };
 
     enum class TokenKind {
-
+        Identifier,
+        StringLiteral,
+        IntegerLiteral,
+        FloatLiteral,
+        Operator,
+        Separator,
+        Eof,
     };
 
     using Ident = std::string;
     //using Token = std::variant<Op, Ident, float, int>;
     struct Token {
-        std::variant<Op, Ident, float, int> code;//其实也可以搞成std::any
-        std::string text;//获取字符串
+       TokenKind kind;
+       std::string text;
+       std::any code;//其实也可以用std::variant,分别有Op string int float之类
+       Token(TokenKind kind, const std::string& text, std::any code = std::any()):
+       kind(kind), text(text), code(code) {
 
-        Token() {
+       }
 
-        }
+       //为了伺候单个字符的情况
+       Token(TokenKind kind, char c, std::any code = std::any()) :
+       kind(kind), text(std::string(1, c)), code(code) {
+
+       }
     };
 
     //包裹的一个字符串
@@ -108,17 +122,36 @@ namespace zeno::zfx {
         }
     };
     struct ZFXTokenizer {
-        std::vector<Token> tokens;
+        std::list<Token> tokens;//因为要频繁删除插入用vector可能效果不好
         CharStream& stream
+        static std::set<std::string> KeyWords;//一些常用的关键词，比如说for if else 之类，我在预读的时候就可以直接查表得到
 
-        static bool isident(char c) {
+        static bool isIdent(char c) {
             return std::isalnumc(c) || c == '_' || c == '$' || '@'
         }
 
-      std::optional<Token> next() {
+        /*
+         * 对运算符的一些判断操作,根据枚举值的大小去判断
+         * */
+        static bool isAssignOp(Op op) const {
+
+        }
+
+        static bool isRelationOp(Op op) const {
+
+        }
+
+        static bool isArithmeticOp(Op op) const {
+
+        }
+
+        static bool isLogicalOp(Op op) const {
+
+        }
+      Token next() {
             if (this->tokens.empty()) {
                 auto t = this->getAToken();
-
+                //不会插入到tokens中去
                 return t;
             } else {
                 auto t = this->tokens.front();
@@ -127,21 +160,36 @@ namespace zeno::zfx {
             }
         }
 
-       std::optional<Token> peek() {
+       Token peek() {
             //读取但是不移动
+            if (this->tokens.empty()) {
+                auto t = this->getAToken();
+                this->tokens.push_back(t);
+                return t;
+            } else {
+                auto t = this->tokens.front();
+                return t;
+            }
         }
 
-        std::optional<Token> peek2() {
-            //预读两个字符但是不移动
+        Token peek2() {
+            while (this->tokens.size() < 2) {
+                auto t = this->getAToken();
+                this->tokens.push_back(t);
+            }
+
+            auto it = this->tokens.begin();
+            std::advance(it, 1);
+            return *it;
         }
 
     private:
-        std::optional<Token> take() {
+        Token getAToken() {
             this->skipWhiteSpaces();//先跳过空白
 
-            if () {
-                //如果到了字符串末尾，那么就要么返回一个std::nullopt,或者一个空Token
-
+            if (this->stream.eof()) {
+                //如果到了字符串末尾,返回一个空Token
+                return Token(TokenKind::Eof, "EOF");
             } else {
                 auto ch = this->stream.peek();
                 if (isident(ch)) {
@@ -183,188 +231,179 @@ namespace zeno::zfx {
                             literal += ch;
                             ch1 = this->stream.peek();
                         }
-                        //return
+                        return Token();//浮点数字面零
                     } else {
-                        //return 一个整形字面量
+                        return Token();
                     }
                 } else if (ch == '.') {
-
+//我们也允许只以.开头的小数
                 } else if (ch == '/') {
                     this->stream.next();
                     auto ch1 = this->stream.peek();
                     if (ch1 == '=') {
                         this->stream.next();
-
-                        //return /= 这样一个 token
+                        return Token(TokenKind::Operator, "/=", Op::kDivideAssign);
                     } else {
                         //如果都不是
-                        //return 这 / 个Token
+                        return Token(TokenKind::Operator, "/", Op::kDivide);
                     }
                 } else if (ch == '+') {
                     this->stream.next();
                     auto ch1 = this->stream.peek();
                     if (ch1 == '+') {
                         this->stream.next();
-
-                        //return token ++;
+                        return Token(TokenKind::Operator, "++", Op::);
                     } else if (ch1 == '=') {
                         this->stream.next();
-                        //return token +=;
+                        return Token(TokenKind::Operator, "+=", Op::kPlusAssign);
                     } else {
                         //如果都不是，那就返回+
-                        //return token +;
+                        return Token(TokenKind::Operator, "+", Op::kPlus);
                     }
                 } else if(ch == '-') {
                     this->stream.next();
                     auto ch1 = this->stream.peek();
                     if (ch1 == '-') {
                         this->stream.next();
-                        //return token ++;
+                        return Token(TokenKind::Operator, "--", Op::);
                     } else if (ch1 == '=') {
                         this->stream.next();
-                        //return token -=;
+                        return Token(TokenKind::Operator, "-=", Op::kMinusAssign);
                     } else {
-                        //return token -;
+                        return Token(TokenKind::Operator, "-", Op::kMinus);
                     }
                 } else if (ch == '*') {
                     this->stream.next();
                     auto ch1 = this->stream.peek();
                     if (ch1 == '=') {
                         this->stream.next();
-                        //return token *=
+                        return Token(TokenKind::Operator, "*=", Op::kMultiplyAssign);
                     } else {
-                        //return *
+                        return Token(TokenKind::Operator, "*", Op::kMultiply);
                     }
                 } else if (ch == '%') {
                     this->stream.next();
                     auto ch1 = this->stream.peek();
                     if (ch1 == '=') {
                         this->stream.next();
-                        //return token %=
+                        return Token(TokenKind::Operator, "%=", Op::kModulus);
                     } else {
-                        //return token %
+                        return Token(TokenKind::Operator, "%", Op::kModulusAssign);
                     }
                 } else if (ch == '>') {
                     this->stream.next();
                     auto ch1 = this->stream.peek();
-                    if (ch1 == '>') {
+                    if(ch1 == '=') {
                         this->stream.next();
-                        ch1 = this->stream.peek();
-                    } else if (ch1 == '=') {
+                        return Token(TokenKind::Operator, ">=", Op::);
+                    } else if (ch1 == '>') {
                         this->stream.next();
-
+                        return Token(TokenKind::Operator, ">>", Op::);
+                    } else {
+                        return Token(TokenKind::Operator, ">", Op::);
                     }
                 } else if (ch == '<') {
                  this->stream.next();
                  auto ch1 = this->stream.peek();
                  if (ch1 == '=') {
                      this->stream.next();
-                     //return token <=;
+                     return Token(TokenKind::Operator, "<=", Op::);
                  } else if(ch1 == '<') {
                      this->stream.next();
-                     ch1 = this->stream.peek();
-                     if (ch1 == '=') {
-                         this->stream.next();
-                         //return token <<=
-                     } else {
-                         //return token <<
-                     }
+                     return Token(TokenKind::Operator, "<<", Op::);
+                 } else {
+                    return Token(TokenKind::Operator, "<", Op::);
                  }
                 } else if(ch == '=') {
                     this->stream.next();
                     auto ch1 = this->stream.peek();
                     if (ch1 == '=') {
                         this->stream.next();
-                        ch1 = this->stream.peek();
-
+                        return Token(TokenKind::Operator, "==", Op::);
+                    } else {
+                        return Token(TokenKind::Operator, "=", Op::kAssign);
                     }
                 } else if(ch == '!') {
                     this->stream.next();
                     auto ch1 = this->stream.peek();
                     if (ch1 == '=') {
                         this->stream.next();
-                        ch1 = this->stream.peek();
-                        if (ch1 == '=') {
-                            this->stream.next();
-                            //return token !==
-                        } else {
-                            //return ！=
-                        }
+                        return Token(TokenKind::Operator, "!=", Op::kLogicNot);
                     } else {
-                        //return token !;
+                        return Token(TokenKind::Operator, "!", Op::kCmpNotEqual);
                     }
                 } else if (ch == '|'){
                     this->stream.next();
                     auto ch1 = this->stream.peek();
                     if (ch1 == '|') {
                         this->stream.next();
-                        //return  ||
+                        return Token(TokenKind::Operator, "||", Op::kLogicOr);
                     } else if (ch1 == '=') {
                         this->stream.next();
-                        //return |=
+                        return Token(TokenKind::Operator, "|=", Op::kBitOrAssign);
                     } else {
-                        //return token |
+                        return Token(TokenKind::Operator, "|", Op::kBitOr);
                     }
                 } else if(ch == '&') {
                     this->stream.next();
                     auto ch1 = this->stream.peek();
                     if (ch1 == '&') {
                          this->stream.next();
-                         //return &&；
+                         return Token(TokenKind::Operator, "&&", Op::kLogicAnd);
                     } else if(ch1 == '=') {
                         this->stream.next();
-                        //return &=;
+                        return Token(TokenKind::Operator, "&=", Op::kBitAndAssign);
                     } else {
-                        //return token &
+                        return Token(TokenKind::Operator, "&", Op::kBitAnd);
                     }
                 } else if(ch == '^') {
                     this->stream.next();
                     auto ch1 = this->stream.peek();
                     if (ch1 == '=') {
                         this->stream.next();
-                        //return token ^=
+                        return Token(TokenKind::Operator,"^=", Op::kBitXorAssign);
                     } else {
-                        //return token ^
+                        return Token(TokenKind::Operator, "^", Op::kBitXor);
                     }
                 } else if (ch == '~') {
                     this->stream.next();
-                    //return token ~
+                    return Token(TokenKind::Operator, "~", Op::kBitInverse);
                 } else if(ch == '(') {
                     this->stream.next();
-                    //return token (
+                    return Token(TokenKind::Separator, ch, Op::kLeftBrace);
                 } else if(ch == ')') {
                     this->stream.next();
-                    //return token )
+                    return Token(TokenKind::Separator, ch, Op::kRightBrace);
                 } else if(ch == '{') {
                     this->stream.next();
-                    //return token {
+                    return Token(TokenKind::Separator, ch, Op::kLeftBlock);
                 } else if(ch == '}') {
                     this->stream.next();
-                    //return }
+                    return Token(TokenKind::Separator, ch, Op::kRightBlock);
                 } else if(ch == '[') {
                     this->stream.next();
-                    //return token [
+                    return Token(TokenKind::Separator, ch, Op::kLeftBracket);
                 } else if(ch == ']') {
                     this->stream.next();
-                    //return token [
+                    return Token(TokenKind::Separator, ch, Op::kRightBracket);
                 } else if (ch == ':') {
                     this->stream.next();
-                    //return token :
+                    return Token(TokenKind::Separator, ch, Op::kTernaryElse);
                 } else if(ch == ';') {
                     this->stream.next();
-                    //return token ;
+                    return Token(TokenKind::Separator, ch, Op::kSemicolon);
                 } else if(ch == ',') {
                     this->stream.next();
-                    //return token ,
+                    return Token(TokenKind::Separator, ch, Op::kComma);
                 } else if(ch == '?') {
                     this->stream.next();
-                    //return token ?
+                    return Token(TokenKind::Separator, ch, Op::kTernary);
                 } else if(ch == '@') {
                     this->stream.next();
-                    //return token @
+                    return Token();
                 } else if(ch == '$') {
                     this->stream.next();
-                    //return token $
+                    return Token();
                 } else {
                     //识别到错误字符
                     std::cout << "Unrecognized pattern meeting" << std::endl;
@@ -392,11 +431,13 @@ namespace zeno::zfx {
             return token;
         }
 
-        Token parseIdentifer() {
+        Token parseIdentifier() {
 
-            Token token();
 
-            return token;
         }
+    };
+
+    std::set<std::string> ZFXTokenizer::KeyWords {
+        "if", "else", "for"
     };
 }

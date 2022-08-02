@@ -17,7 +17,7 @@
 #include <map>
 #include <typeinfo>
 #include <any>
-
+#include <unordered_map>
 /*
  * variableDecl : '@'|'$' Identifier
  * */
@@ -28,7 +28,6 @@ namespace {
 struct ZFXParser {
     std::unique_ptr<AST> root;
     AST *curr{};
-
     /*
     explicit ZFXParser(span<Token> a_tokens) noexcept : tokens{a_tokens} {
         root = std::make_unique<AST>();//可以看作是一个根节点
@@ -37,6 +36,7 @@ struct ZFXParser {
 */
     ZFXTokenizer &tokenizer;
     //span<Token> tokens;
+    static std::unordered_map<std::string , int32_t> OpRec;//运算符优先级为了伺候表达式解析的左递归问题
     ZFXParser(ZFXTokenizer &tokenizer) : tokenizer(tokenizer) {
 
     }
@@ -73,16 +73,16 @@ struct ZFXParser {
     std::shared_ptr<AST> parseProg() {
         auto stmts = this->parseStatementList();
 
-        //return Prog
     }
 
     std::vector<std::shared_ptr<AST>> parseStatementList() {
         std::vector<std::shared_ptr<AST>> stmts;
         auto t = this->tokenizer.peek();//先预读一个token;
-        while() {
-            //只要我的
+        while(t.kind != TokenKind::Eof) {
+            //只要我的token不是Eof
             auto stmt = this->parseStatement();
             stmts.push_back(stmt);//插入一个ast节点
+            t = this->scanner.peek();
         }
         return stmts;
     }

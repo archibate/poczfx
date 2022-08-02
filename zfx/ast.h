@@ -1,20 +1,23 @@
 //
 // Created by admin on 2022/7/28.
 //
-
 #pragma once
+
+#include "scanner.h"
+#include <any>
 
 namespace zeno::zfx {
     struct AST {
-        Token token;
         std::vector<std::uniqueptr<AST>> chs;
+        virtual std::any accept(AstVisitor& visitor) = 0;
     };
 
     class AstVisitor {
     public:
         //对抽象类的访问
         //对于相应的具体类，会调用visitor合适的具体方法
-        virtual std::any visit(Ast &node);
+        virtual std::any visit(AST &node);
+
     };
 
 //$
@@ -35,19 +38,25 @@ namespace zeno::zfx {
 //整形字面量
     struct IntegerLiteral : public AST {
         int32_t value;//字面量数值
-        //类型
-        //构造函数
+        std::any accept(AstVisitor& visitor) override {
+
+        }
     };
 
     //浮点数
     struct FloatLiteral : public AST {
         float value;
+        std::any accept(AstVisitor &visitor) override {
+
+        }
     };
 
     //字符串
     struct StringLiteral : public AST {
         std::string value;
-
+        std::any accept(AstVisitor &visitor) override {
+            
+        }
     };
 
     struct Binary : public AST {
