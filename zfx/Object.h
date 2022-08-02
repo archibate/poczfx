@@ -9,6 +9,17 @@
 
 namespace zeno::zfx {
 
+#define setnvalue(obj, n) \
+{ \
+   Object* i_o = (obj)            \
+                                  \
+}
+
+#define setvvalue(obj, x, y, z, w) \
+{                                  \
+   Object* i_o = (obj);            \
+                                   \
+}
 namespace object_details {
 
 struct Object;
@@ -264,5 +275,7 @@ inline Object atan2(Object a, Object b) noexcept {
 }
 
 }
+    struct Proto {
 
+    };
 }

@@ -9,4 +9,4 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 project(main LANGUAGES CXX)
 
-add_executable(main main.cpp zfx/parser.cpp)
+add_executable(main main.cpp zfx/parser.h)
