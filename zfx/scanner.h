@@ -295,31 +295,31 @@ namespace zeno::zfx {
                     auto ch1 = this->stream.peek();
                     if(ch1 == '=') {
                         this->stream.next();
-                        return Token(TokenKind::Operator, ">=", Op::);
+                        return Token(TokenKind::Operator, ">=", Op::kCmpGreaterEqual);
                     } else if (ch1 == '>') {
                         this->stream.next();
-                        return Token(TokenKind::Operator, ">>", Op::);
+                        return Token(TokenKind::Operator, ">>", Op::kBitShr);
                     } else {
-                        return Token(TokenKind::Operator, ">", Op::);
+                        return Token(TokenKind::Operator, ">", Op::kCmpGreaterThan);
                     }
                 } else if (ch == '<') {
                  this->stream.next();
                  auto ch1 = this->stream.peek();
                  if (ch1 == '=') {
                      this->stream.next();
-                     return Token(TokenKind::Operator, "<=", Op::);
+                     return Token(TokenKind::Operator, "<=", Op::kCmpLessEqual);
                  } else if(ch1 == '<') {
                      this->stream.next();
-                     return Token(TokenKind::Operator, "<<", Op::);
+                     return Token(TokenKind::Operator, "<<", Op::kBitShl);
                  } else {
-                    return Token(TokenKind::Operator, "<", Op::);
+                    return Token(TokenKind::Operator, "<", Op::kCmpLessThan);
                  }
                 } else if(ch == '=') {
                     this->stream.next();
                     auto ch1 = this->stream.peek();
                     if (ch1 == '=') {
                         this->stream.next();
-                        return Token(TokenKind::Operator, "==", Op::);
+                        return Token(TokenKind::Operator, "==", Op::kCmpEqual);
                     } else {
                         return Token(TokenKind::Operator, "=", Op::kAssign);
                     }
