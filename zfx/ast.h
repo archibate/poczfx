@@ -5,21 +5,83 @@
 
 #include "scanner.h"
 #include <any>
-
+#include <vector>
+#include <string>
 namespace zeno::zfx {
+   /*
+    * 最顶层的ast节点
+    * */
+
+   class AstVisitor {
+   public:
+       //对抽象类的访问
+       //对于相应的具体类，会调用visitor合适的具体方法
+       virtual std::any visit(AST &node);
+
+   };
+
     struct AST {
-        std::vector<std::uniqueptr<AST>> chs;
-        virtual std::any accept(AstVisitor& visitor) = 0;
+        //在Token开始的位置
+        //在Token结束的位置
+
+        //父节点，初始化为空, 如果为空则代表是根节点
     };
 
-    class AstVisitor {
-    public:
-        //对抽象类的访问
-        //对于相应的具体类，会调用visitor合适的具体方法
-        virtual std::any visit(AST &node);
+    /*
+     * 语句
+     * 子类包括函数声明， 表达式语句
+     * */
+    struct Stmt : public AST {
 
     };
 
+    struct Decl {
+        std::string name;
+    };
+    /*
+     * 变量声明语句
+     * */
+    struct VariableStmt : public Stmt {
+        VariableDecl variableDecl;
+        std::any accept(AstVisitor &visitor) {
+            //返回visitor调用的方法
+        }
+    };
+
+    struct VariableDecl : public Decl {
+        //代表Type的Ast节点
+        //变量类型 符号，参数，浮点，整数， 字符串
+        //变量符号 varSymbol
+        //变量初始化所用的表达式 init
+        std::any accept(AstVisitor &visitor) {
+            //调用visitor方法
+        }
+    };
+
+    //表达式语句就是在表达式后面加一个
+    class ExpressionStmt : public Stmt{
+
+    };
+
+    class Expression : public AST {
+        //表达式的类型
+        //是否是一个左值
+        //本表达式的常量值
+    };
+
+   class Binary : public Expression {
+       //运算符
+       //左边表达式
+       //右边表达式
+       std::any accept(AstVisitor &visitor) {
+
+       }
+       
+   };
+
+   class Unary : public Expression {
+
+   };
 //$
     struct AstParm : public AST {
         std::string name;//同理如果是$F,那么string就是“F”，同理如果$有初始值的话那么也需要一个类型type和value
@@ -35,35 +97,14 @@ namespace zeno::zfx {
         //最后我们在visit时候调用这个AST节点的构造函数
     };
 
-//整形字面量
-    struct IntegerLiteral : public AST {
-        int32_t value;//字面量数值
-        std::any accept(AstVisitor& visitor) override {
 
-        }
-    };
 
-    //浮点数
-    struct FloatLiteral : public AST {
-        float value;
-        std::any accept(AstVisitor &visitor) override {
 
-        }
+    //字面零:包含字符串字面零， 整数字面零， 浮点数字面量
+    class Literal : public Expression {
+
     };
 
     //字符串
-    struct StringLiteral : public AST {
-        std::string value;
-        std::any accept(AstVisitor &visitor) override {
-            
-        }
-    };
 
-    struct Binary : public AST {
-
-    };
-
-    struct Unary : public AST {
-
-    };
 }

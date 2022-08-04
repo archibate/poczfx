@@ -3,8 +3,15 @@
 `zfx`的词法分析采用的是有限自动机, 通过维护一个CharStream的字符串流，通过`peek`预读一个字符,`next`读一个字符并且移动来解析`Token`
 一个`Token`包含`TokenKind`(有这么几种类型, `string` `float`, `int` `vec3`, 操作符， 分隔符), `string` 代表文本内容例如
 "+=", `std::any`代表任意类型的内容比如说整数，浮点数字符串,有一些`token`是空`any`
+前端有一个要伺候的点是识别`vec3`
 字节码生成思路和`emitAssembly`差不多通过访问 `ast``formart`生成，`ast`是由`parse``token`生成的
 最后手工维护一个解释器
+
+`Compiler`的做法是这样的，有两个头文件， 一个是`ByteCodeBuilder` 提供`builder` 字节码的一些方法
+`Compiler`单元呢是在遍历 `ast`时候调用`builder`方法产生字节码
+`Object`在`zfx`中是最基础的对象数据结构, 类似于`Python`的`PyObject`,我想在一些`Object`中保留一些函数指针来进行数值计算
+总之`Object`是虚拟机运行时需要的东西
+`Object`在头部需要几个标志位,用于以下几个用途比如判断是否需要`gc`
 
 ```c++
 #include "zfx.h

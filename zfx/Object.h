@@ -94,7 +94,23 @@ public:
         return {};
     }
 };
+#if 0
+    enum class ObjectType {
 
+    };
+    struct Object {
+        ObjectType type{};//对象类型，包括浮点，整数，字符串，数组(也就是vec3)
+        unsigned long flags;//标志位
+    };
+
+    //字符串对象
+    struct StringObject : public Object {
+        size_t length;
+
+    };
+
+    //提供一些内置函数比如创建字符串, 拼接字符串之类
+#endif
 namespace details {
     using Variant = std::variant<float, int, Pointer>;
 
