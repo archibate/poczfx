@@ -226,7 +226,33 @@ private:
     static std::map<Op, int32_t> opRec;//为了伺候二元运算符左递归问题
 };
 
-std::map<Op, int32_t> ZFXTokenizer::opRec {};
+std::map<Op, int32_t> ZFXTokenizer::opRec {
+        {Op::kAssign,                     2}, //+
+        {Op::kPlusAssign,                 2}, // +=
+        {Op::kMinusAssign,                2},  // -=
+        {Op::kMultiplyAssign,             2},  // *=
+        {Op::kDivideAssign,               2},  // /=
+        {Op::kModulusAssign,              2},  // %=
+        {Op::kBitAndAssign,               2},  // &=
+        {Op::kBitOrAssign,                2},  // |=
+        {Op::kBitXorAssign,               2},  // ^=
+        {Op::kLogicOr,                    4},  // ||
+        {Op::kLogicAnd,                   5},  // &&
+        {Op::kBitOr,                      6}, // |
+        {Op::kBitXor,                     7}, // ^
+        {Op::kBitAnd,                     8}, // &
+        {Op::kCmpEqual,                   9},  // ==
+        {Op::kCmpNotEqual,                9},  // !=
+        {Op::kCmpGreaterThan,             10},  // >
+        {Op::kCmpGreaterEqual,            10},  // >=
+        {Op::kCmpLessThan,                10},  // <
+        {Op::kCmpLessEqual,               10},  // <=
+        {Op::kPlus,                       12},  //+
+        {Op::kMinus,                      12},  // -
+        {Op::kDivide,                     13},   // /
+        {Op::kMultiply,                   13},   // *
+        {Op::kModulus,                    13},   // %
+};
 
 struct ZFXLower {
     std::vector<IRNode> nodes;

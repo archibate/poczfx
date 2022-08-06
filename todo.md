@@ -13,20 +13,35 @@
 总之`Object`是虚拟机运行时需要的东西
 `Object`在头部需要几个标志位,用于以下几个用途比如判断是否需要`gc`
 
-```c++
-#include "zfx.h
-#include "zfxlib.h
+`zfx`中定义一个变量 `variableDecl` : '@'|`$` `Identifier` `=` `singleExpression`
+一个`VariableDecl` `ast`节点只需要包含变量类型， 变量名称，初始化部分的值
+一个`$T = 10` 会产生 两个`ast`节点 `VariableDecl` : `name`:T , `theType` : `param`  `IntegerLiteral` : 10
+支持变量的初始化和定义后，我们就可以支持二元运算和赋值操作
+赋值操作是右结合的
+先解析赋值表达式，赋值表达式的每一个子节点可以是任意二元运算节点
+`$T = $D = $F + 10`
+`SingleExpression` : `assignment`
+`assignment` : `binary` ('AssignmentOp' , `binary`)*
+`binary` : `primary` (BinaryOp primary) 
 
-int main() {
-    //创建zfx虚拟机栈
-    ZfxState* l = Zfx_New_State();
-    //调用Zfx.h中提供的函数
-    
-    
-    
-    zfx_close();
-}
+伺候一下赋值表达式
+函数签名`()`
+
+
+`IfStatement` :
+`If` '(' `expression` ')' `statement` (`ElseStatement`) `?`
+
+```c++
+//跳过 if 这一个 Token
+//判断下一个预读 Token 是否是分隔符 ( 然后解析条件 expression
+
+//解析 forStatement
+// fo
 ```
+
+在`zfx` 中定义 函数加一下 `function` 关键字
+
+`@`是属性,但是他不代表数据类型
 `Object`是`zfx`中所有变量的抽象定义，他代表了`zfx`中的所有变量
 我想把老板张发财中的`context `或者是`Executable`做成对应于`lua`中的`lua_State`
 其实就是维护一个全局的栈，保存zfx运行时的信息

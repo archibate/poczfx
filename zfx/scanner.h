@@ -11,6 +11,8 @@
 #include <string_view>
 #include <set>
 #include <any>
+#include <string>
+#include <unordered_map>
 
 namespace zeno::zfx {
     enum class Op {
@@ -71,22 +73,74 @@ namespace zeno::zfx {
         Eof,
     };
 
+    enum class KeyWordKind {
+        Function = 200,//取一个大点的值防止枚举值冲突
+        Break,
+        Return,
+        If,
+        Else,
+        For,
+        While,
+        Undefined
+    };
+
     using Ident = std::string;
     //using Token = std::variant<Op, Ident, float, int>;
+
+    //
+    struct Position {
+        std::uint32_t begin {1};//开始于哪一个字符, 默认为一
+        std::uint32_t end {1};//结束于哪一个字符
+        std::uint32_t line {1};//所在的行号， 默认为一
+        std::uint32_t col {1}; //所在的列号
+
+        Position(uint32_t begin, uint32_t end, uint32_t line, uint32_t col) :
+        begin(begin), end(end), line(line), col(col) {
+
+        }
+
+        Position(const Position &other) {
+            this->begin = other.begin;
+            this->end = other.end;
+            this->line = other.line;
+            this->col = other.col;
+        }
+
+        Position& operator=(const Position &other) :
+                begin(other.begin), end(other.end),
+                line(other.line), col(other.col){
+            return *this;
+        }
+
+        std::string toString() {
+            return "(ln: " + std::to_string(this->line) + ", col: " + std::to_string(this->col) +
+            ", pos: " + std::to_string(this->begin) + ")";
+        }
+
+    };
+
     struct Token {
        TokenKind kind;
        std::string text;
        std::any code;//其实也可以用std::variant,分别有Op string int float之类
-       Token(TokenKind kind, const std::string& text, std::any code = std::any()):
-       kind(kind), text(text), code(code) {
+       Position pos;
+
+       Token(TokenKind kind, std::string &text, Position &pos, std::any code = std::any()):
+       kind(kind), text(text), pos(pos), code(code) {
 
        }
 
-       //为了伺候单个字符的情况
-       Token(TokenKind kind, char c, std::any code = std::any()) :
-       kind(kind), text(std::string(1, c)), code(code) {
+       //伺候单个字符
+       Token(TokenKind kind, char c, Position &pos, std::any code = std::any()) :
+       kind(kind), text(std::string(1, c)), pos(pos), code(code){
 
        }
+
+       //将token输出
+       std::string toString() {
+           // return "Token" + ":" = this->pos.toString() + "\t" + ;
+       }
+
     };
 
     //包裹的一个字符串
@@ -123,9 +177,10 @@ namespace zeno::zfx {
     };
     struct ZFXTokenizer {
         std::list<Token> tokens;//因为要频繁删除插入用vector可能效果不好
-        CharStream& stream
-        static std::set<std::string> KeyWords;//一些常用的关键词，比如说for if else 之类，我在预读的时候就可以直接查表得到
+        CharStream stream;
+        std::unordered_map<std::string, KeyWordKind> KeyWordMap;
 
+        ZFXTokenizer(CharStream &stream) : st(stream) {}
         static bool isIdent(char c) {
             return std::isalnumc(c) || c == '_' || c == '$' || '@'
         }
@@ -183,24 +238,33 @@ namespace zeno::zfx {
             return *it;
         }
 
+        //获取下一个Token的位置
+        Position getNextPos() {
+
+        }
+
+        //获取前一个Token的位置
+        Position getLastPos() {
+            return lastPos;
+        }
     private:
         Token getAToken() {
             this->skipWhiteSpaces();//先跳过空白
 
             if (this->stream.eof()) {
                 //如果到了字符串末尾,返回一个空Token
-                return Token(TokenKind::Eof, "EOF");
+                return Token(TokenKind::Eof, "EOF", pos);
             } else {
                 auto ch = this->stream.peek();
-                if (isident(ch)) {
+                if (isLetter(ch) || ch == '_') {
                     return this->parseIdentifer();
-                } else if (ch == '"') {
+                } else if (ch == '"' || "'") {
                     //开始解析字符串
                     return this->parseStringLiteral();
                 } else if (this->isDigit(ch)) {
                     //解析数字字面量
                     this->stream.next();//再预读一个字符
-                    auto ch1 = this->stream.peek();
+                    auto ch1 = this->stream.peek();//取出字符
                     std::string literal = "";
                     if (ch == '0') {
                         //不支持八进制，二进制，十六进制
@@ -209,8 +273,9 @@ namespace zeno::zfx {
                             literal += '0'
                         } else {
                             std::cout << "0 cannot be followed bu other digit now" << std::endl;
+                            //暂时不支持十六进制, 八进制, 二进制
                             //先跳过去再解析token
-                            this->strem.next();
+                            this->stream.next();
                             return this->getAToken();
                         }
                     } else if(ch >= '1' && ch <= '9') {
@@ -218,7 +283,7 @@ namespace zeno::zfx {
                         while(this->isDigit(ch1)) {
                             ch = this->stream.next();
                             literal += ch;
-                            ch1 = this->stream.peek();
+                            ch1 = this->stream.peek();//实数的情况
                         }
                     }
                     if (ch1 == '.') {
@@ -233,10 +298,24 @@ namespace zeno::zfx {
                         }
                         return Token();//浮点数字面零
                     } else {
-                        return Token();
+                        return Token();//返回一个整形字面零
                     }
                 } else if (ch == '.') {
-//我们也允许只以.开头的小数
+                    //如果直接以点开头，那么有两种情况一个是以点开头的浮点数，另一种就是点操作符
+                    this->stream.next();
+                    auto ch1 = this->stream.peek();
+                    if (this->isDigit(ch1)) {
+                        std string literal = ".";
+                        while(this->isDigit(ch1)) {
+                            ch = this->stream.next();
+                            literal += ch;
+                            ch1 = this->stream.peek();
+                        }
+                        return Token();
+                    } else {
+                        //返回.这一个Token
+                        return Token();
+                    }
                 } else if (ch == '/') {
                     this->stream.next();
                     auto ch1 = this->stream.peek();
@@ -413,31 +492,59 @@ namespace zeno::zfx {
             }
         }
 
-        bool isident(char c) noexcept{
-            return std::isalnum(c) || c == '_' || c == '$' || c == '@';
+        bool isLetter(char c) noexcept{
+            return (c >= 'A' && c <= 'Z' || c >= 'a' && c <= 'z');
+            //我在这里不需要识别 $ 和 @ 这两个字符，因为这两个字符会单独成为两个独立的Token，Kind是属性
         }
 
         bool isDigit(char ch) {
             return (ch >= '0' && ch <= '9');
         }
+
+        bool isLetterDigitOrUnderScope(char ch) {
+            return (ch > = 'a' && ch <= 'z') ||
+                    (ch >= 'A' && ch <= 'Z') ||
+                    (ch >= '0' && ch <= '9') ||
+                    (ch == '_');
+        }
+
         Token parseStringLiteral() {
-            //直接去掉第一个字符,因为上面已经判断了ch == '"'
+            //上面this->st.peek() = '"'时，就开始解析
             Token token();
             this->stream->next();
             while(!this->stream.eof() && this->stream.peek() != '"') {
                 token.text += this->stream.next();
             }
 
+            if(this->st.peek() == '"') {
+                //消化掉最后一个'"'
+                this->st.next();
+            } else {
+                //打印错误。出错了肯定
+            }
             return token;
         }
 
+        //解析标识符，并且从标识符中识别出关键字
         Token parseIdentifier() {
+            //Identifier 目前是指clr, pos这种， 后续像if else for 之类
+            Token token();
 
+            //第一个字符不用判断了,因为在调用者那里已经判断过了
+            while(!this->stream.eof() &&
+            isLetterDigitOrUnderScope(this->stream.peek())) {
+                token.text += this->stream.next();
+            }
 
+            auto it = KeyWords.find(token.text);
+            if (it != KeyWords.end()) {
+                //如果不为空则token的kind是关键字
+                token.kind = TokenKind::KeyWord;
+                token.code = it->second;
+            }
+            return token;
         }
     };
 
-    std::set<std::string> ZFXTokenizer::KeyWords {
-        "if", "else", "for"
-    };
+
 }

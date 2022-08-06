@@ -8,15 +8,38 @@
 #pragma once
 #include "scope.h"
 #include "parser.h"
+#include "ast.h"
 #include <memory>
+#include <map>
 
-namespace zfx {
+namespace zeno::zfx {
 
-    class Enter {
+    class SemanticAstVisitor : AstVisitor {
+    public:
+        //添加编译错误
+        //添加警告
+    };
+
+    //消解类型， 后续再施工
+    class TypeResolver : public SemanticAstVisitor {
+
+    };
+
+    //加入符号表，
+    class Enter : public SemanticAstVisitor{
     public:
         std::shared_ptr<Scope> scope;//目前zfx只有一个作用域,后续如果有{}，那每进一个{}就创建一个作用域
+        std::shared_ptr<FunctionSymbol> functionSym;
+
         /*
-         * 把所有@和$声明都加入到符号表中去
+         * 返回最顶级的Scope对象
+        */
+
+        std::any visitProg() {
+
+        }
+        /*
+         * 把所有@和$声明都加入到符号表中去，
          * */
         std::any visitVariableDecl() {
             //先查找当前作用域是否有这一个符号
@@ -28,7 +51,26 @@ namespace zfx {
 
             return std::any();
         }
+
+        //把函数声明加入到符号表中去
+        std::any visitFunctionDecl() {
+
+        }
     };
 
+    /* 引用消解
+     * 遍历ast的时候,如果发现函数调用和变量引用，就去找他的定义
+     *
+     */
+    class RefResolver : public SemanticAstVisitor {
+    public:
+      std::shared_ptr<Scope> scope;
 
+      //每一个Scope作用域已经声明了变量的列表
+      std::map<>
+    };
+
+    class TypeChecker : public SemanticAstVisitor {
+
+    };
 }
