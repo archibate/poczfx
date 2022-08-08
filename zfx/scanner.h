@@ -174,11 +174,16 @@ namespace zeno::zfx {
         bool eof() {
 
         }
+
+        Position getPosition() {
+            return Position(this->pos + 1, this->pos + 1, this->line, this->col);
+        }
     };
     struct ZFXTokenizer {
         std::list<Token> tokens;//因为要频繁删除插入用vector可能效果不好
         CharStream stream;
         std::unordered_map<std::string, KeyWordKind> KeyWordMap;
+        Position lastPos {0, 0, 0, 0};//这个类似于链表的虚拟头节点
 
         ZFXTokenizer(CharStream &stream) : st(stream) {}
         static bool isIdent(char c) {
@@ -203,6 +208,7 @@ namespace zeno::zfx {
         static bool isLogicalOp(Op op) const {
 
         }
+
       Token next() {
             if (this->tokens.empty()) {
                 auto t = this->getAToken();
@@ -233,6 +239,10 @@ namespace zeno::zfx {
                 this->tokens.push_back(t);
             }
 
+            //特判一下如果push还是没有元素, 那就返回一个eof
+            if (this->tokens.size() < 1) {
+                //return Token{}
+            }
             auto it = this->tokens.begin();
             std::advance(it, 1);
             return *it;
@@ -240,7 +250,7 @@ namespace zeno::zfx {
 
         //获取下一个Token的位置
         Position getNextPos() {
-
+            return this->peek.pos();
         }
 
         //获取前一个Token的位置
@@ -250,17 +260,17 @@ namespace zeno::zfx {
     private:
         Token getAToken() {
             this->skipWhiteSpaces();//先跳过空白
-
+            auto pos = this->stream.getPosition(); //我们只需要更新一下pos中的end
             if (this->stream.eof()) {
                 //如果到了字符串末尾,返回一个空Token
-                return Token(TokenKind::Eof, "EOF", pos);
+                return Token(TokenKind::Eof, "EOF", pos); //这里code是默认的
             } else {
                 auto ch = this->stream.peek();
                 if (isLetter(ch) || ch == '_') {
                     return this->parseIdentifer();
                 } else if (ch == '"' || "'") {
                     //开始解析字符串
-                    return this->parseStringLiteral();
+                    return this->parseStringLiteral(ch);
                 } else if (this->isDigit(ch)) {
                     //解析数字字面量
                     this->stream.next();//再预读一个字符
@@ -296,9 +306,9 @@ namespace zeno::zfx {
                             literal += ch;
                             ch1 = this->stream.peek();
                         }
-                        return Token();//浮点数字面零
+                        return Token(TokenKind::FloatLiteral, literal, pos);//浮点数字面零
                     } else {
-                        return Token();//返回一个整形字面零
+                        return Token(TokenKind::IntegerLiteral, literal, pos);//返回一个整形字面零
                     }
                 } else if (ch == '.') {
                     //如果直接以点开头，那么有两种情况一个是以点开头的浮点数，另一种就是点操作符
@@ -311,7 +321,7 @@ namespace zeno::zfx {
                             literal += ch;
                             ch1 = this->stream.peek();
                         }
-                        return Token();
+                        return Token(TokenKind::FloatLiteral, literal, pos);
                     } else {
                         //返回.这一个Token
                         return Token();
@@ -321,35 +331,35 @@ namespace zeno::zfx {
                     auto ch1 = this->stream.peek();
                     if (ch1 == '=') {
                         this->stream.next();
-                        return Token(TokenKind::Operator, "/=", Op::kDivideAssign);
+                        return Token(TokenKind::Operator, "/=", pos,Op::kDivideAssign);
                     } else {
                         //如果都不是
-                        return Token(TokenKind::Operator, "/", Op::kDivide);
+                        return Token(TokenKind::Operator, "/", pos, Op::kDivide);
                     }
                 } else if (ch == '+') {
                     this->stream.next();
                     auto ch1 = this->stream.peek();
                     if (ch1 == '+') {
                         this->stream.next();
-                        return Token(TokenKind::Operator, "++", Op::);
+                        return Token(TokenKind::Operator, "++", pos, Op::);
                     } else if (ch1 == '=') {
                         this->stream.next();
-                        return Token(TokenKind::Operator, "+=", Op::kPlusAssign);
+                        return Token(TokenKind::Operator, "+=", pos, Op::kPlusAssign);
                     } else {
                         //如果都不是，那就返回+
-                        return Token(TokenKind::Operator, "+", Op::kPlus);
+                        return Token(TokenKind::Operator, "+", pos, Op::kPlus);
                     }
                 } else if(ch == '-') {
                     this->stream.next();
                     auto ch1 = this->stream.peek();
                     if (ch1 == '-') {
                         this->stream.next();
-                        return Token(TokenKind::Operator, "--", Op::);
+                        return Token(TokenKind::Operator, "--", pos, Op::);
                     } else if (ch1 == '=') {
                         this->stream.next();
-                        return Token(TokenKind::Operator, "-=", Op::kMinusAssign);
+                        return Token(TokenKind::Operator, "-=", pos, Op::kMinusAssign);
                     } else {
-                        return Token(TokenKind::Operator, "-", Op::kMinus);
+                        return Token(TokenKind::Operator, "-", pos, Op::kMinus);
                     }
                 } else if (ch == '*') {
                     this->stream.next();
@@ -464,19 +474,19 @@ namespace zeno::zfx {
                     return Token(TokenKind::Separator, ch, Op::kLeftBracket);
                 } else if(ch == ']') {
                     this->stream.next();
-                    return Token(TokenKind::Separator, ch, Op::kRightBracket);
+                    return Token(TokenKind::Separator, ch, pos, Op::kRightBracket);
                 } else if (ch == ':') {
                     this->stream.next();
-                    return Token(TokenKind::Separator, ch, Op::kTernaryElse);
+                    return Token(TokenKind::Separator, ch, pos, Op::kTernaryElse);
                 } else if(ch == ';') {
                     this->stream.next();
-                    return Token(TokenKind::Separator, ch, Op::kSemicolon);
+                    return Token(TokenKind::Separator, ch, pos, Op::kSemicolon);
                 } else if(ch == ',') {
                     this->stream.next();
-                    return Token(TokenKind::Separator, ch, Op::kComma);
+                    return Token(TokenKind::Separator, ch, pos, Op::kComma);
                 } else if(ch == '?') {
                     this->stream.next();
-                    return Token(TokenKind::Separator, ch, Op::kTernary);
+                    return Token(TokenKind::Separator, ch, pos, Op::kTernary);
                 } else if(ch == '@') {
                     this->stream.next();
                     return Token();

@@ -27,9 +27,41 @@
 伺候一下赋值表达式
 函数签名`()`
 
-
 `IfStatement` :
 `If` '(' `expression` ')' `statement` (`ElseStatement`) `?`
+
+`Symbol`符号表
+有了符号表之后，可以做一些语义分析， 当我们遇到函数声明， 变量声明之后，就把符号加到符号表中去，如果别的地方引用了这个符号，可以直接进入符号表去找
+1:名称，也就是变量名称，函数名称，类名称
+2:符号种类, 比如属性，符号， 变量，函数
+
+在做语义分析的时候将符号加入到符号表中去
+主要完成了下几个接口
+`SymbolVisitor`类主要实现`visitVarSymbol`和`visitFunctionSymbol`两个方法
+`SymbolDumper`类是继承自`SymbolVisitor`打印 `Symbol`信息
+
+作用域
+`Scope`基本施工完毕，剩下`ScopeDumper`打印`Scope`信息还没有完成, 以及当多层嵌套作用域时，级联查找某个符号的函数
+`ScopeDumper`主要是完成像函数作用域, 快作用域， `for`作用域的信息打印
+
+`SemanticAnalyer`语义分析主要实现以下几个类
+`TypeResolver` 
+`Enter`类主要是进入作用域时，将符号加入到符号表
+
+`RefResolver` 
+引用消解
+1 函数的引用消解
+2 变量的引用消解
+遍历`ast`时， 如果发现函数调用和变量引用，就去找他的定义
+
+
+`zfx`字节码和虚拟机设计，想参考`tvm`的`stackvm`设计
+
+`BCModule`代表一个字节码模块， 里面包含一个模块里的各种函数定义，常量池等
+
+字节码生成类`BCGenerator`继承自`AstVisitor`
+在`BCGenerator`中我重写各种`visit`方法
+
 
 ```c++
 //跳过 if 这一个 Token
@@ -49,7 +81,7 @@ zfx 要不要支持字符串，如果支持字符串，我的想法是采用lua�
 全局的map<>
 
 
-zfx的字节码指令大小为32为 从低到高依次为OpCode A B C
+
 
 
 zfx需要支持的数学函数有 `abs()` `cos()` `sin()` `ceil()`

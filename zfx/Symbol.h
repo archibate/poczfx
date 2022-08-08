@@ -3,70 +3,92 @@
 //
 //关于zfx变量的一些符号属性,
 #pragma once
-#incldue <string>
+#include <string>
 #include <any>
+#include <map>
+#include <vector>
 
+namespace zeno::zfx {
 /*
  * 符号类型
  * */
-enum class SymKind {
+    enum class SymKind {
+        Attribute, Parameter , Variable, Function
+    };
 
-};
+    inline std::string SymKindToString(SymKind kind) {
+        std::map<SymKind, std::string> kindString {
+                {SymKind::Attribute, "Attribute"},
+                {SymKind::Parameter, "Parameter"},
+                {SymKind::Variable, "Variable"},
+                {SymKind::Function, "Function"},
+        }
+
+        auto it = kindString.find(kind);
+        if (it != kindString.end()) {
+            return it->second;
+        }
+        return "";
+    }
 //注意Symbol 不是@这个sym,而是一个基类一个符号基类
-class Symbol {
-public:
+    class Symbol {
+    public:
 //有这么几个参数
-    std::string name;//变量名，@clr的话 name = clr
-    //类型 type
-    //SymKind
+        std::string name;//变量名，@clr的话 name = clr
+        Type type; //这里的Type,举个例子来说就是@clr 那他的类型就是vec3 float
+        SymKind kind;
 
-    Symbol() {
+        Symbol(const std::string &name, Type type, SymKind kind) :
+        name(name), type(type), kind(kind){
 
-    }
+        }
 
-    std::any accept(SymbolVisitor &visitor);
-};
+        virtual std::any accept(SymbolVisitor &visitor) = 0; //让继承他的AttributeSymbol和FunctionSymbol去重写他
+    };
 
+//@, $, 变量
+    class VarSymbol : public Symbol {
+    public:
+        VarSymbol() : {
 
-class VarSymbol : public Symbol {
-public:
+        }
 
-};
+        std::any accept(SymbolVisitor &visitor) override {
+            return visitor.visitVarSymbol();
+        }
+    };
 
-class FunctionSymbol : Symbol{
-public:
+    class FunctionSymbol : Symbol {
+    public:
+        FunctionSymbol() : {
 
-};
+        }
 
-/*
-class Sym : public Symbol{
-public:
-
-};
-class ParamSym : public Symbol {
-public:
-
-};
-*/
-
-//由于目前并没有自定义函数， 所以这里的FunctionSymbol 是只代表所有内置的函数
-
-
-class SymbolVisitor {
-public:
-    std::any visitVarSymbol() {
-    //其实就是打印出sym.name和SymKind
-    }
-
-    std::any visitFunctionSymbol() {
-//和visitFunctionSymbol差不多
-    }
-};
+        std::any accept(SymbolVisitor &visitor) {
+            return visitor.visitFunctionSymbol;
+        }
+    };
 
 
+    class SymbolVisitor {
+    public:
+        std::any visitVarSymbol() {
 
-//一些系统内置符号
-extern std::map<std::string, std::shared_ptr<FunctionSymbol>> built_fun;
+            return std::any();
+        }
+
+        std::any visitFunctionSymbol() {
+
+            return std::any();
+        }
+    };
+
+
+    //一些系统内置符号
+    extern std::map<std::string, std::shared_ptr<FunctionSymbol>> built_fun;
+}
+
+
 
 
 

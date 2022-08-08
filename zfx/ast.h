@@ -30,6 +30,8 @@ namespace zeno::zfx {
        }
        virtual std::any visit(AST &node);
 
+       virtual std::any visitProg();
+
        virtual std::any visitVariableDecl();
 
        virtual std::any visitVariableStatement();
@@ -39,6 +41,12 @@ namespace zeno::zfx {
        virtual std::any visitCallSignature();
 
        virtual std::any visitParameterList();
+
+       virtual std::any visitBlock();
+
+       virtual std::any visitExpressionStatement();
+
+       virtual std::any visitReturnStatement();
 
        virtual std::any visitIfStatement();
 
@@ -54,14 +62,14 @@ namespace zeno::zfx {
 
        virtual std::any visitStringLiteral();
 
+       virtual std::any visitFunctionCall();
 
    };
 
    //打印Ast调试信息
    class AstDumper : public AstVisitor{
    public:
-       //重写AstVisitor的方法
-
+       //重写AstVisitor的方法,打印AST节点的信息
    };
 
 
@@ -70,26 +78,75 @@ namespace zeno::zfx {
         //在Token结束的位置
 
         //父节点，初始化为空, 如果为空则代表是根节点
+        AST() {
+
+        }
+
+        virtual std::any accept(AstVisitor &visitor) = 0;//AST是纯虚类
+
+        //virtual std::string toString() ;
     };
 
     /*
      * 语句
      * 子类包括函数声明， 表达式语句
      * */
-    struct Stmt : public AST {
+    struct Statement : public AST {
+        Statement() {
+
+        }
+    };
+
+    //所有的声明都会对应一个符号
+    struct Decl : public AST{
+        std::string name;
+        Decl() {
+
+        }
+    };
+
+    //函数声明节点
+    struct FunctionDecl : public Decl {
+        std::string name;
+        CallSignature callSignature;
+        Block body;
+        Scope scope;
+        FunctionSymbol sym;
+        FunctionKind functionKind;
+        FunctionDecl () {
+
+        }
+
+        std::any accept(AstVisitor &visitor) {
+
+        }
+    };
+
+    struct ParameterList : public AST{
+        std::vector<VariableDecl> params;
+        ParameterList() {
+
+        }
+
+        std::any accept(AstVisitor &visitor) {
+
+        }
 
     };
 
-    struct Decl {
-        std::string name;
+    struct Block : public Statement{
+
     };
     /*
      * 变量声明语句
      * */
-    struct VariableStmt : public Stmt {
+    struct VariableStatement : public Statement {
         VariableDecl variableDecl;
         std::any accept(AstVisitor &visitor) {
             //返回visitor调用的方法
+        }
+        VariableStatement() {
+
         }
     };
 
@@ -104,15 +161,10 @@ namespace zeno::zfx {
     };
 
     //表达式语句就是在表达式后面加一个
-    class ExpressionStmt : public Stmt{
+    class ExpressionStmt : public Statement{
 
     };
 
-    class Expression : public AST {
-        //表达式的类型
-        //是否是一个左值
-        //本表达式的常量值
-    };
 
    class Binary : public Expression {
        //运算符

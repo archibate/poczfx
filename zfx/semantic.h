@@ -9,6 +9,7 @@
 #include "scope.h"
 #include "parser.h"
 #include "ast.h"
+#include "Symbol.h"
 #include <memory>
 #include <map>
 
@@ -25,7 +26,10 @@ namespace zeno::zfx {
 
     };
 
-    //加入符号表，
+
+    /*
+     * 从这里开始我们创建符号表, 将符号加入到符号表中去， 查找符号， 更新符号
+     * */
     class Enter : public SemanticAstVisitor{
     public:
         std::shared_ptr<Scope> scope;//目前zfx只有一个作用域,后续如果有{}，那每进一个{}就创建一个作用域
@@ -35,13 +39,16 @@ namespace zeno::zfx {
          * 返回最顶级的Scope对象
         */
 
-        std::any visitProg() {
-
+        //
+        std::any visitProg(Prog &prog) {
+            //做一些初始化的工作
+            //设置主程序的返回类型
         }
+
         /*
          * 把所有@和$声明都加入到符号表中去，
          * */
-        std::any visitVariableDecl() {
+        std::any visitVariableDecl(Variable &) {
             //先查找当前作用域是否有这一个符号
             auto currentScope = this->scope;
             if () {
@@ -53,7 +60,8 @@ namespace zeno::zfx {
         }
 
         //把函数声明加入到符号表中去
-        std::any visitFunctionDecl() {
+        std::any visitFunctionDecl(FunctionDecl &decl) {
+            //设置作用域
 
         }
     };

@@ -26,8 +26,8 @@ namespace {
 
 
 struct ZFXParser {
-    std::unique_ptr<AST> root;
-    AST *curr{};
+    //std::unique_ptr<AST> root;
+    //AST *curr{};
     /*
     explicit ZFXParser(span<Token> a_tokens) noexcept : tokens{a_tokens} {
         root = std::make_unique<AST>();//可以看作是一个根节点
