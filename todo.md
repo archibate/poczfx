@@ -56,10 +56,12 @@
 
 
 `zfx`字节码和虚拟机设计，想参考`tvm`的`stackvm`设计
+`OpCode`是`uint8_t`类型的
+`BCModule`代表一个字节码模块， 里面包含一个模块里的各种函数定义，常量池等,在构造函数的时候将内置函数加入到常量池中去
 
-`BCModule`代表一个字节码模块， 里面包含一个模块里的各种函数定义，常量池等
-
+`BCModuleDumper`主要用来打印`consts`常量池中的内容，比如字符串，浮点数，数组，内置函数
 字节码生成类`BCGenerator`继承自`AstVisitor`
+一个操作数栈，一个`code`栈
 在`BCGenerator`中我重写各种`visit`方法
 
 
