@@ -24,9 +24,10 @@ namespace zeno::zfx {
         std::vector<std::any> consts;
         //将内置函数,字符串浮点数等加入到常量池中去
 
+        std::shared_ptr<FunctionSymbol> main_;//入口函数也是主函数
         BCModule() {
             for () {
-                //将内置函数加入到常量池中去
+                //在symbol.h中有一个built_ins的内置函数符号，将他加入到consts常量池中去
             }
         }
 
@@ -34,7 +35,11 @@ namespace zeno::zfx {
 
     //打印字节码用来调试
     class BCModulesDumper {
-
+    public:
+        void dump(BCModule &bcModule) {
+            //new 一个SymbolDumper
+            //从常量池中循环取出内容,并且判断类型调用相应的visit
+        }
     };
 
     //字节码生成程序。从AST中遍历即可
@@ -79,8 +84,8 @@ namespace zeno::zfx {
         std::any visitBlock(Block &block) {
             std::vector<uint8_t> ret;
             //开始遍历Block中的每一条statement
-            for (auto &x : ) {
-
+            for (auto &x : block.stmts) {
+                //调用visit方法
             }
 
             return ret;
@@ -88,20 +93,51 @@ namespace zeno::zfx {
 
         std::any visitFunctionDecl(FunctionDecl &decl) {
             //1.设置当前函数符号
+            //std::shared_ptr<lastFunctionSym> = this->functionSym;
+            //this->functionSym = decl.sym;更新
+            //this->consts.push_back(this->functionSym);
 
-            //
+            //为函数体生成代码
+            //std::vector<uint8_t> code ;
+
+            //恢复当前函数
+            //this->functionSym = lastFunctionSym;
         }
 
         std::any visitVariableDecl(VariableDecl &decl) {
             std::vector<uint8_t> code;
 
-
+            //首先判断变量声明是否有初始化部分，
+            /*
+             * if (variableDecl.init != nullptr) {
+             *      code = this->visit(variableDecl.init);
+             * }
+             * //再生成变量赋值的指令
+             * */
             return code;
         }
 
+        /*
+         * 根据变量是否是左值,如果是左值那就返回变量符号,否则生成iload指令
+         * */
+        std::any visitVariable(Variable &v) {
+            if (v.isLeftValue()) {
+                return v.sym;
+            } else {
+                return this->getVariableValue(v.sym);
+            }
+        }
         //为返回语句生成
         std::any visitReturnStatement(RetuanStatement returnStatement) {
+            std::vector<uint8_t> code;
+            //首先判断return后面是否有表达式子
+            if (returnStatement.exp != nullptr) {
+                //为return 后面的表达式exp生成字节码
+            } else {
+                //生成return 代码，返回值是void
+            }
 
+            return code;
         }
 
         std::any visitFunctionCall(FunctionCall &functionCall) {
@@ -113,8 +149,9 @@ namespace zeno::zfx {
          * */
         std::any visitIfStatement(IfStatement &ifStatement) {
             std::vector<uint8_t> code;
-
-
+            //std::vector<uint8_t> code_condition = this->visit(ifStatement.condition);
+            //std::vector<uint8_t> code_ifBlock ;
+            //std::vector<uint8_t> code_elseBlock;
             return code;
         }
 
@@ -137,17 +174,32 @@ namespace zeno::zfx {
         }
 
         /*
-         *生成获取本地变量值的指令
+         *生成获取本地变量值的指令,类似与将数加载到寄存器中
         */
         std::any getVariableValue(VarSymbol &varSymbol) {
             std::vector<uint8_t> code;
+            //首先判断以下varSymbol的init是否为空
+            if() {
+                //获取本地变量的下标
+                switch() {
 
-
+                }
+            }
             return code;
         }
 
-        std::any setVariableValue(VarSymbol &symbol) {
+        /*
+         * 和上面函数功能相反，是写回本地变量
+         * */
+        std::any setVariableValue(VarSymbol &varSymbol) {
+            std::vector<uint8_t> code;
+            if (varSymbol.sym != nullpty) {
+                //获取本地变量的下标
+                switch() {
 
+                }
+            }
+            return code;
         }
 
          /*
@@ -167,11 +219,24 @@ namespace zeno::zfx {
             //code.push_back(OpCode::sldc);
             return code;
         }
-        //遇到浮点数加入到常量池中去
+
+        /*
+         * 生成二元表达式的时候注意，可以先为左右子树代码，再把运算指令放在最后
+         * 赋值指令有一点不一样,他需要生成store指令
+         * */
         std::any visitBinary(Binary &bi) {
             std::vector<uint8_t> code;
 
 
+            //特判一下是否是为赋值
+            if (bi.op = Op::Assign) {
+
+            } else {
+                //处理其他运算
+                //加入左子树代码
+                //加入右子树代码
+                //加入二元运算符
+            }
             return code;
         }
 
@@ -186,33 +251,112 @@ namespace zeno::zfx {
 
     class VM {
     public:
+        //调用栈
+         std::vector<std::shared_ptr<StackFrame>> callStack;
 
+        int32_t execute(const BCModule &module) {
+            //返回的int32_t是运行的状态消息
+            //先找出入口函数
+            std::shared_ptr<FunctionSymbol> functionSym;
+            if (module.main_ == nullptr) {
+                //输出错误语句
+                return -1;
+            } else {
+              functionSym = module.main_;
+            }
+
+            //创建一个栈帧
+            auto frame = std::make_shared<StackFrame>(functionSym);
+            this->callStack.push_back(frame);
+
+
+            //当前运行的代码
+            std::vector<uint8_t> code;
+            if() {
+
+            } else {
+
+            }
+
+            //当前代码的位置
+            std::uint32_t  codeIndex = 0;
+
+            //一直执行代码，直到遇到return 语句
+
+            //设置一些临时变量
+            int8_t byte1 = 0;
+            int8_t byte2 = 0;
+            std::any vleft;
+            std::any vright;
+
+            //执行就是一个大循环
+            while (true) {
+
+            }
+        }
     };
 
     //函数栈帧
     class StackFrame {
     public:
-        //对应函数
-        FunctionSymbol functionSymbol;
+        //对应的函数,用来找到代码
+        std::shared_ptr<FunctionSymbol> functionSym;
 
-        std::uint32_t returnIndex;
+        uint32_t returnIndex {0};
 
         //函数的本地变量
         std::vector<uint32_t> localVars;
 
         //函数的操作数栈
+        std::vector<std::any> oprandStack;
+
+        StackFrame(std::shared_ptr<FunctionSymbol> &functionSymbol) : functionSymbol(functionSymbol){
+
+        }
     };
 
     //从bcModule生成字节码
     class BCModuleWriter {
     public:
-
+        std::vector<const std::shared_ptr<Type>> types; //保存该模块涉及的类型
 
         /*
          * 从BCModule生成字节码
          * */
+        std::vector<uint8_t> write(const BCModule &module) {
 
+        }
+
+        std::vector<uint8_t> writeVarSymbol() {
+
+        }
+
+        std::vector<uint8_t> writeFunctionSymbol() {
+
+        }
+
+        //把字符串添加到字节码数组中
+        void writeString(std::vector<uint8_t> &code, const std::string &str) {
+
+        }
     private:
-        
+
+    };
+
+    //从字节码生成BCModule
+    class BCModuleReader {
+    private:
+        //读取字节码时的下标
+        uint32_t index = 0;
+
+        //解析出来的所有类型
+        std::map<std::string, Type> types;
+
+        std::map<std::string, std::any> typeInfos;
+    public:
+        std::shared_ptr<BCModule> read(const std::vector<int>& bc) {
+
+        }
+
     };
 }

@@ -203,6 +203,10 @@ namespace zeno::zfx {
         Literal() {
 
         }
+
+        std::string toString() {
+
+        }
     };
 
     //字符串
@@ -210,11 +214,11 @@ namespace zeno::zfx {
         //在构造函数中将类型设置为string
 
         std::string get() const {
-            //return value;
+            return value.get<std::string>();
         }
 
         std::any accept(AstVisitor &visitor) {
-
+             return visitor.visitStringLiteral(this);
         }
     };
 
@@ -222,16 +226,24 @@ namespace zeno::zfx {
         //在构造函数里将type设置为int
 
         int get() const {
-            //return value;
+            return value.get<int>();
         }
 
         std::any accept(AstVisitor &visitor) {
-
+            return visitor.visitIntegerLiteral(this);
         }
     };
 
     struct FloatLiteral : public Literal {
         //构造函数中将类型设置为float
+
+        float get() {
+            return value.get<float>();
+        }
+
+        std::any accept(AstVisitor &visitor) {
+            return visitor.visitFloatLiteral();
+        }
     };
 
     //后续还会有null 和 boolean字面量

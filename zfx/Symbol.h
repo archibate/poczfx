@@ -60,12 +60,25 @@ namespace zeno::zfx {
 
     class FunctionSymbol : Symbol {
     public:
-        FunctionSymbol() : {
+        std::vector<VarSymbol> vars;//本地变量的列表
+
+        uint32_t opStackSize = 10;  //操作数栈的大小
+
+        std::vector<uint8_t> byteCode;
+
+        FunctionDecl *decl;//存放AST， 作为代码运行
+
+        FunctionSymbol()  {
 
         }
 
         std::any accept(SymbolVisitor &visitor) {
-            return visitor.visitFunctionSymbol;
+            return visitor.visitFunctionSymbol(this);
+        }
+
+        //获取参数数量
+        uint32_t getNumParams() {
+
         }
     };
 
