@@ -166,7 +166,7 @@ namespace zeno::zfx {
          * @param code
          * @param offset
          * */
-        void addOfferSetToJump(std::vector<uint8_t> &code, uint32_t offset) {
+        std::vector<uint8_t> addOfferSetToJump(std::vector<uint8_t> &code, uint32_t offset) {
             if (offset == 0) {
                 return;
                 //如果便宜量为0，那就直接短路
@@ -313,9 +313,11 @@ namespace zeno::zfx {
         StackFrame(std::shared_ptr<FunctionSymbol> &functionSymbol) : functionSymbol(functionSymbol){
 
         }
+
+        //可能需要把StackFrame做成一个链表保存一下保存上一个栈帧，下一个栈帧
     };
 
-    //从bcModule生成字节码
+    //从bcModule生成字节码,其实是一个序列化和反序列化的过程
     class BCModuleWriter {
     public:
         std::vector<const std::shared_ptr<Type>> types; //保存该模块涉及的类型

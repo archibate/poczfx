@@ -8,12 +8,18 @@
 #include <vector>
 #include <string>
 #include <variant>
-
+#include <map>
+#include <memory>
 namespace zeno::zfx {
    /*
     * 最顶层的ast节点
     * */
    class AST;
+
+   /*
+    * 对AST做遍历的Visitor
+    * 这是一个基类，定义了缺省的遍历方式，子类可以覆盖他的实现方法,修改遍历方法
+    * */
    class AstVisitor {
    public:
        //对抽象类的访问
@@ -28,41 +34,41 @@ namespace zeno::zfx {
        std::any getEnclosingScope() {
 
        }
-       virtual std::any visit(AST &node);
+       virtual std::any visit(AST &node, std::string additional = "");
 
-       virtual std::any visitProg();
+       virtual std::any visitProg(Prog &prog, std::string additional = "");
 
-       virtual std::any visitVariableDecl();
+       virtual std::any visitVariableDecl(VariableDecl &variableDecl, std::string additional = "");
 
-       virtual std::any visitVariableStatement();
+       virtual std::any visitVariableStatement(VariableStatement &variableStatement, std::string additional = "");
 
-       virtual std::any visitFunctionDecl();
+       virtual std::any visitFunctionDecl(FunctionDecl &functionDecl, std::string additional = "");
 
-       virtual std::any visitCallSignature();
+       virtual std::any visitCallSignature(CallSignature &callSignature, std::string additional = "");
 
-       virtual std::any visitParameterList();
+       virtual std::any visitParameterList(ParameterList &parameterList, std::string additional = "");
 
-       virtual std::any visitBlock();
+       virtual std::any visitBlock(Block &block, std::string additional = "");
 
-       virtual std::any visitExpressionStatement();
+       virtual std::any visitExpressionStatement(ExpressionStatement &expressionStatement, std::string additional = "");
 
-       virtual std::any visitReturnStatement();
+       virtual std::any visitReturnStatement(ReturnStatement &returnStatement, std::string additional = "");
 
-       virtual std::any visitIfStatement();
+       virtual std::any visitIfStatement(IfStatement &ifStatement, std::string additional = "");
 
-       virtual std::any visitForStatement();
+       virtual std::any visitForStatement(ForStatement &forStatement, std::string additional = "");
 
-       virtual std::any visitBinary();
+       virtual std::any visitBinary(Binary &binary, std::string additional = "");
 
-       virtual std::any visitUnary();
+       virtual std::any visitUnary(Unary &unary, std::string additional = "");
 
-       virtual std::any visitIntegerLiteral();
+       virtual std::any visitIntegerLiteral(IntegerLiteral &integerLiteral, std::string additional = "");
 
-       virtual std::any visitFloatLiteral();
+       virtual std::any visitFloatLiteral(FloatLiteral &floatLiteral, std::string additional = "");
 
-       virtual std::any visitStringLiteral();
+       virtual std::any visitStringLiteral(StringLiteral &stringLiteral, std::string additional = "");
 
-       virtual std::any visitFunctionCall();
+       virtual std::any visitFunctionCall(FunctionCall &functionCall, std::string additional = "");
 
    };
 
@@ -74,11 +80,12 @@ namespace zeno::zfx {
 
 
     struct AST {
-        //在Token开始的位置
-        //在Token结束的位置
+        Position beginPos; //在Token开始的位置
+        Position endPos;   //在Token结束的位置,其实Position 是可以省略的，但是还没想好
 
         //父节点，初始化为空, 如果为空则代表是根节点
-        AST() {
+        AST(Position beginPos, Position endPos) :
+        beginPos(beginPos), endPos(endPos){
 
         }
 
@@ -92,7 +99,8 @@ namespace zeno::zfx {
      * 子类包括函数声明， 表达式语句
      * */
     struct Statement : public AST {
-        Statement() {
+        Statement(Position beginPos, Position endPos) :
+        AST(beginPos, endPos){
 
         }
     };
@@ -100,11 +108,21 @@ namespace zeno::zfx {
     //所有的声明都会对应一个符号
     struct Decl : public AST{
         std::string name;
-        Decl() {
+        Decl(Position beginPos, Position endPos, const std::string &name) :
+        AST(Position beginPos, Position endPos), name(name){
 
         }
     };
 
+    struct Expression : public AST{
+        Expression(Position beginPos, Position endPos) :
+        AST(beginPos, endPos){
+
+        }
+
+        //表达式的类型
+        
+    };
     //函数声明节点
     struct FunctionDecl : public Decl {
         std::string name;
@@ -124,18 +142,38 @@ namespace zeno::zfx {
 
     struct ParameterList : public AST{
         std::vector<VariableDecl> params;
-        ParameterList() {
+        ParameterList(Position beginPos, Position endPos, std::vector<VariableDecl> &params) :
+        {
 
         }
 
         std::any accept(AstVisitor &visitor) {
-
+            return visitor.visitParameterList(*this);
         }
 
     };
 
     struct Block : public Statement{
+        std::vector<Statement> stmts;
+        std::shared_ptr<Scope> scope;//当前作用域
+        Block(Position beginPos, Position endPos, std::vector<Statement> &stmts) {
 
+        }
+
+        std::any accept(AstVisitor &visitor) {
+            return visitor.visitBlock(*this);
+        }
+    };
+
+    struct Prog : public Block{
+        std::shared_ptr<FunctionSymbol> sym;
+
+        //本模块新声明的类型
+        //std::map<>
+
+        std::any accept(AstVisitor &visitor) {
+            return visitor.visitProg(*this);
+        }
     };
     /*
      * 变量声明语句
@@ -151,33 +189,65 @@ namespace zeno::zfx {
     };
 
     struct VariableDecl : public Decl {
-        //代表Type的Ast节点
+        std::string name;//变量名
+        //代表Type的Ast
         //变量类型 符号，参数，浮点，整数， 字符串
-        //变量符号 varSymbol
-        //变量初始化所用的表达式 init
+        std::shared_ptr<VarSymbol> sym;//变量符号 varSymbol
+        std::shared_ptr<Expression> init;//变量初始化所用的表达式 init
         std::any accept(AstVisitor &visitor) {
             //调用visitor方法
         }
     };
 
     //表达式语句就是在表达式后面加一个
-    class ExpressionStmt : public Statement{
+    struct ExpressionStmt : public Statement{
+        std::shared_ptr<Expression> exp;
+        ExpressionStmt() {
 
+        }
+
+        std::any accept(AstVisitor &visitor) {
+            return visitor.visitExpressionStatement(*this);
+        }
     };
 
+    struct Expression : public AST {
+        std::shared_ptr<Type> type; //表达式的类型
+        std::any constValue;//本表达式的常量值
+        Expression() {
 
-   class Binary : public Expression {
-       //运算符
-       //左边表达式
-       //右边表达式
+        }
+
+
+    };
+    struct Binary : public Expression {
+       OpCode op;//运算符
+       std::shared_ptr<Expression> exp1;//左边表达式
+       std::shared_ptr<Expression> exp2;//右边表达式
+
+       Binary(OpCode op, std::shared_ptr<AST> exp1, std::shared_ptr<AST> exp2) {
+
+       }
+
        std::any accept(AstVisitor &visitor) {
-
+            return visitor.visitBinary(*this);
        }
 
    };
 
    class Unary : public Expression {
         //运算符和表达式
+        OpCode op;
+        std::shared_ptr<AST> exp;//表达式
+        bool isPrefix;//判断是前缀还是后缀
+
+        Unary() {
+
+        }
+
+        std::any accept(AstVisitor &visitor) {
+            return visitor.visitUnary(*this);
+        }
    };
 //$
     struct AstParm : public AST {

@@ -64,6 +64,24 @@
 一个操作数栈，一个`code`栈
 在`BCGenerator`中我重写各种`visit`方法
 
+栈机中条件指令的实现
+`cmpeq` 从栈中弹出两个值， 如果`value1 == value2`则跳转
+`cmpne` 如果`value1== `
+像`if`这种条件语句是这样处理的
+生成`condition`条件表达式的代码,生成`if`块的代码，如果有的话，生成`else`块的代码，然后计算偏移量拼接起来，其实就是加一个跳转指令的长度，如果为真就在栈顶放一个1
+计算出每一块的起始地址
+
+`BCModuleWrite`和`BCModuleRead`是字节码序列化
+
+一个`BCModule`里面包含以下几个模块
+`consts`常量池 包括`NumberConst`和`FunctionConst` ,`FunctionConst` 包含`FunctionSymbol`
+`numConsts`常量的数量
+
+
+
+`IR`设计(可选)
+一个最原始的基类`IRNode`, `DataNode`和`ControlNode`继承自`IRNode`
+`DataNode`是所有数据的基类, `ControlNode`是所有控制节点的基类
 
 ```c++
 //跳过 if 这一个 Token
