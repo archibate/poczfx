@@ -89,7 +89,7 @@ namespace zeno::zfx {
 
         }
 
-        virtual std::any accept(AstVisitor &visitor) = 0;//AST是纯虚类
+        virtual std::any accept(AstVisitor &visitor, std::string additional) = 0;//AST是纯虚类
 
         //virtual std::string toString() ;
     };
@@ -127,16 +127,16 @@ namespace zeno::zfx {
     struct FunctionDecl : public Decl {
         std::string name;
         CallSignature callSignature;
-        Block body;
-        Scope scope;
+        Block body;//函数体
+        Scope scope; //该函数所对的作用域
         FunctionSymbol sym;
         FunctionKind functionKind;
         FunctionDecl () {
 
         }
 
-        std::any accept(AstVisitor &visitor) {
-
+        std::any accept(AstVisitor &visitor, std::string additional) {
+            return visitor.visitFunctionDecl(*this, additional);
         }
     };
 
@@ -160,17 +160,16 @@ namespace zeno::zfx {
 
         }
 
-        std::any accept(AstVisitor &visitor) {
-            return visitor.visitBlock(*this);
+        std::any accept(AstVisitor &visitor, std::string additional) {
+            return visitor.visitBlock(*this, additional);
         }
     };
 
     struct Prog : public Block{
-        std::shared_ptr<FunctionSymbol> sym;
+        std::shared_ptr<FunctionSymbol> sym; //一个模块中的所有函数声明
+        Prog(Position beginPos, Position endPos, std::vector<std::shared_ptr<AST>> &stmts) {
 
-        //本模块新声明的类型
-        //std::map<>
-
+        }
         std::any accept(AstVisitor &visitor) {
             return visitor.visitProg(*this);
         }
@@ -178,24 +177,26 @@ namespace zeno::zfx {
     /*
      * 变量声明语句
      * */
-    struct VariableStatement : public Statement {
-        VariableDecl variableDecl;
-        std::any accept(AstVisitor &visitor) {
-            //返回visitor调用的方法
-        }
-        VariableStatement() {
-
-        }
-    };
 
     struct VariableDecl : public Decl {
-        std::string name;//变量名
+        //std::string name;//变量名
         //代表Type的Ast
         //变量类型 符号，参数，浮点，整数， 字符串
         std::shared_ptr<VarSymbol> sym;//变量符号 varSymbol
         std::shared_ptr<Expression> init;//变量初始化所用的表达式 init
+        std::any accept(AstVisitor &visitor, std::string additional) {
+            return visitor.visitVariableDecl(*this, additional);
+        }
+    };
+    struct VariableStatement : public Statement {
+        VariableDecl variableDecl;
+        VariableStatement(Position beginPos, Position endPos, std::shared_ptr<AST> variableDecl) :
+        Statement(beginPos, endPos), variableDecl(variableDecl){
+
+        }
+
         std::any accept(AstVisitor &visitor) {
-            //调用visitor方法
+            return visitor.visitVariableStatement(*this, additional);
         }
     };
 
@@ -213,9 +214,11 @@ namespace zeno::zfx {
 
     struct Expression : public AST {
         std::shared_ptr<Type> type; //表达式的类型
+        //bool shouldBeLeftValue {false}; 当前位置是否需要一个
+        //bool isLeftValue{false}; //是否是左值
         std::any constValue;//本表达式的常量值
-        Expression() {
-
+        Expression(Position beginPos, Position endPos) :
+        AST(beginPos, endPos) {
         }
 
 
@@ -225,12 +228,14 @@ namespace zeno::zfx {
        std::shared_ptr<Expression> exp1;//左边表达式
        std::shared_ptr<Expression> exp2;//右边表达式
 
-       Binary(OpCode op, std::shared_ptr<AST> exp1, std::shared_ptr<AST> exp2) {
+       Binary(Position beginPos, Position endPos, OpCode op,
+              std::shared_ptr<AST> exp1, std::shared_ptr<AST> exp2) : Expression(beginPos, endPos),
+              op(op), exp1(exp1), exp2(exp2) {
 
        }
 
-       std::any accept(AstVisitor &visitor) {
-            return visitor.visitBinary(*this);
+       std::any accept(AstVisitor &visitor, std::string additional) {
+            return visitor.visitBinary(*this, additional);
        }
 
    };
@@ -241,13 +246,39 @@ namespace zeno::zfx {
         std::shared_ptr<AST> exp;//表达式
         bool isPrefix;//判断是前缀还是后缀
 
-        Unary() {
+        Unary(Position beginPos, Position endPos, OpCode op, std::shared_ptr<AST> exp) :
+        Expression(beginPos, endPos){
 
         }
 
-        std::any accept(AstVisitor &visitor) {
-            return visitor.visitUnary(*this);
+        std::any accept(AstVisitor &visitor, std::string additional) {
+            return visitor.visitUnary(*this, additional);
         }
+   };
+
+   struct IfStatement : public Statement {
+       std::shared_ptr<AST> condition;
+       std::shared_ptr<Statement> stmt;
+       std::shared_ptr<Statement> elseStmt;
+
+       IfStatement() {
+
+       }
+
+       std::any accept(AstVisitor &visitor, std::string additional) {
+           return visitor.visitIfStatement(*this, additional);
+       }
+   };
+
+   struct ForStatement : public Statement {
+        //for 循环的条件有点多
+       ForStatement() {
+
+       }
+
+       std::any accept(AstVisitor &visitor, std::string additional) {
+           return visitor.visitForStatement(*this, additional);
+       }
    };
 //$
     struct AstParm : public AST {
@@ -294,13 +325,16 @@ namespace zeno::zfx {
 
     struct IntegerLiteral : public Literal {
         //在构造函数里将type设置为int
+        IntegerLiteral(Position beginPos, ) {
+
+        }
 
         int get() const {
             return value.get<int>();
         }
 
-        std::any accept(AstVisitor &visitor) {
-            return visitor.visitIntegerLiteral(this);
+        std::any accept(AstVisitor &visitor, std::string additional) {
+            return visitor.visitIntegerLiteral(*this, additional);
         }
     };
 
