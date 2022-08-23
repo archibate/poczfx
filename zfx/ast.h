@@ -127,10 +127,10 @@ namespace zeno::zfx {
     struct FunctionDecl : public Decl {
         std::string name;
         CallSignature callSignature;
-        Block body;//函数体
-        Scope scope; //该函数所对的作用域
-        FunctionSymbol sym;
-        FunctionKind functionKind;
+        std::shared_ptr<Block> body;//函数体
+        std::shared_ptr<Scope> scope; //该函数所对的作用域
+        std::shared_ptr<FunctionSymbol> sym;
+        std::shared_ptr<FunctionKind> functionKind;
         FunctionDecl () {
 
         }
@@ -154,7 +154,7 @@ namespace zeno::zfx {
     };
 
     struct Block : public Statement{
-        std::vector<Statement> stmts;
+        std::vector<std::shared_ptr<Statement>> stmts;
         std::shared_ptr<Scope> scope;//当前作用域
         Block(Position beginPos, Position endPos, std::vector<Statement> &stmts) {
 
@@ -189,7 +189,7 @@ namespace zeno::zfx {
         }
     };
     struct VariableStatement : public Statement {
-        VariableDecl variableDecl;
+        std::shared_ptr<VariableDecl> variableDecl;
         VariableStatement(Position beginPos, Position endPos, std::shared_ptr<AST> variableDecl) :
         Statement(beginPos, endPos), variableDecl(variableDecl){
 
@@ -246,8 +246,8 @@ namespace zeno::zfx {
         std::shared_ptr<AST> exp;//表达式
         bool isPrefix;//判断是前缀还是后缀
 
-        Unary(Position beginPos, Position endPos, OpCode op, std::shared_ptr<AST> exp) :
-        Expression(beginPos, endPos){
+        Unary(Position beginPos, Position endPos, OpCode op, std::shared_ptr<AST> exp, bool isPrefix) :
+        Expression(beginPos, endPos), op(op), exp(exp), isPrefix(isPrefix){
 
         }
 
@@ -298,10 +298,11 @@ namespace zeno::zfx {
 
 
 
-    //字面零:包含字符串字面零， 整数字面零， 浮点数字面量
+    //字面量:包含字符串字面量， 整数字面量， 浮点数字面量
     struct Literal : public Expression {
         std::variant<std::string, float, int> value;
-        Literal() {
+        Literal(Position beginPos, Position endPos, std::variant<std::string, float, int>& value) :
+        Expression(), value(value){
 
         }
 
@@ -318,8 +319,8 @@ namespace zeno::zfx {
             return value.get<std::string>();
         }
 
-        std::any accept(AstVisitor &visitor) {
-             return visitor.visitStringLiteral(this);
+        std::any accept(AstVisitor &visitor, std::string additional) {
+             return visitor.visitStringLiteral(*this);
         }
     };
 
@@ -329,6 +330,7 @@ namespace zeno::zfx {
 
         }
 
+        //将类型设置为int
         int get() const {
             return value.get<int>();
         }
@@ -341,12 +343,13 @@ namespace zeno::zfx {
     struct FloatLiteral : public Literal {
         //构造函数中将类型设置为float
 
+        //将类型设置为float
         float get() {
             return value.get<float>();
         }
 
-        std::any accept(AstVisitor &visitor) {
-            return visitor.visitFloatLiteral();
+        std::any accept(AstVisitor &visitor, std::string additional) {
+            return visitor.visitFloatLiteral(*this, additional);
         }
     };
 

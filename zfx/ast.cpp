@@ -7,29 +7,31 @@
 namespace zeno::zfx {
     //实现AstVisitor的方法
     std::any AstVisitor::visit(AST &node, std::string additional) {
-       //调用node各自的accept方法
-        return node.accept(*this);
+       //根据node本身调用各自的accept方法
+        return node.accept(*this, additional);
     }
 
     std::any AstVisitor::visitProg(Prog &prog, std::string additional) {
-        return this->visitBlock(prog);
+        //访问prog就是调用visitBlock()
+        return this->visitBlock(prog, additional);
     }
 
     std::any AstVisitor::visitVariableDecl(VariableDecl &variableDecl, std::string additional) {
         //首先判断init是否已经
         if (variableDecl.init != nullptr) {
-            return this->visit(*variableDecl.init);
+            return this->visit(*variableDecl.init, additional);
         }
         return std::any();
     }
 
     std::any AstVisitor::visitVariableStatement(VariableStatement &variableStmt, std::string additional) {
-        return this->visit(*variableStmt.variableDecl);
-        return std::any();
+        return this->visit(*variableStmt.variableDecl, additional);
     }
 
     std::any AstVisitor::visitFunctionDecl(FunctionDecl &functionDecl, std::string additional) {
+        for () {
 
+        }
         return std::any();
     }
 
@@ -46,13 +48,13 @@ namespace zeno::zfx {
     std::any AstVisitor::visitBlock(Block &block, std::string additional) {
         std::any retVal;
         for (auto x : block.stmts) {
-            retVal = this->visit(*x);
+            retVal = this->visit(*x, additional);
         }
         return retVal;
     }
 
-    std::any AstVisitor::visitExpressionStatement(ExpressionStatement &expressionStatement, std::string additional) {
-
+    std::any AstVisitor::visitExpressionStatement(ExpressionStatement &stmt, std::string additional) {
+        return this->visit()
         return std::any();
     }
 
@@ -64,6 +66,7 @@ namespace zeno::zfx {
 
     std::any AstVisitor::visitIfStatement(IfStatement &ifStatement, std::string additional) {
 
+        if ()
         return std::any();
     }
 
@@ -84,15 +87,15 @@ namespace zeno::zfx {
     }
 
     std::any AstVisitor::visitIntegerLiteral(IntegerLiteral &node, std::string additional) {
-        return node.value;
+        return std::get<int>(node.value);
     }
 
     std::any AstVisitor::visitFloatLiteral(FloatLiteral &node, std::string additional) {
-        return node.value;
+        return std::get<float >(node.value);
     }
 
     std::any AstVisitor::visitStringLiteral(StringLiteral &node, std::string additional) {
-        return node.value;
+        return std::get<std::string>(node.value);
     }
 
     std::any AstVisitor::visitFunctionCall(FunctionCall &functionCall, std::string additional) {
