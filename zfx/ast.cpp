@@ -16,33 +16,40 @@ namespace zeno::zfx {
         return this->visitBlock(prog, additional);
     }
 
+    std::any AstVisitor::visitVariableStatement(VariableStatement &variableStmt, std::string additional) {
+        return this->visit(*variableStmt.variableDecl, additional);
+    }
+
     std::any AstVisitor::visitVariableDecl(VariableDecl &variableDecl, std::string additional) {
-        //首先判断init是否已经
+        //有一个纠结的点
+        //首先判断init是否为空，如果不为空则visit访问
         if (variableDecl.init != nullptr) {
             return this->visit(*variableDecl.init, additional);
         }
         return std::any();
     }
 
-    std::any AstVisitor::visitVariableStatement(VariableStatement &variableStmt, std::string additional) {
-        return this->visit(*variableStmt.variableDecl, additional);
-    }
 
     std::any AstVisitor::visitFunctionDecl(FunctionDecl &functionDecl, std::string additional) {
-        for () {
+        this->visit(*functionDecl.callSignature, additional);
+        return this->visit(*functionDecl.body, additional);
+    }
 
+    std::any AstVisitor::visitCallSignature(CallSignature &callSignature, std::string additional) {
+//判断函数调用签名的参数列表是否为空
+        if (callSignature.paramList != nullptr) {
+            return this->visit(*callSignature.paramList, additional);
         }
         return std::any();
     }
 
-    std::any AstVisitor::visitCallSignature(CallSignature &callSignature, std::string additional) {
-
-        return std::any();
-    }
-
+    //遍历参数列表
     std::any AstVisitor::visitParameterList(ParameterList &parameterList, std::string additional) {
-
-        return std::any();
+        std::any retVal;
+        for (auto x : parameterList.params) {
+            retVal = this->visit(*x, additional);
+        }
+        return retVal;
     }
 
     std::any AstVisitor::visitBlock(Block &block, std::string additional) {
@@ -54,25 +61,42 @@ namespace zeno::zfx {
     }
 
     std::any AstVisitor::visitExpressionStatement(ExpressionStatement &stmt, std::string additional) {
-        return this->visit()
+        return this->visit(*stmt.exp, additional);
         return std::any();
     }
 
     std::any AstVisitor::visitReturnStatement(ReturnStatement &returnStatement, std::string additional) {
-
-
+       //需要判断一下是否有返回值语句
+        if (returnStatement.exp != nullptr) {
+            return this->visit();
+        }
         return std::any();
     }
 
     std::any AstVisitor::visitIfStatement(IfStatement &ifStatement, std::string additional) {
-
-        if ()
+        //分别遍历condition stmt, 如果有else部分加上else部分
+        this->visit(*ifStatement.conditional, additional);
+        this->visit(*ifStatement.stmt, additional);
+        if (ifStatement.elseStmt != nullptr) {
+            this->visit(*ifStatemen.elseStmt, additional);
+        }
         return std::any();
     }
 
     std::any AstVisitor::visitForStatement(ForStatement &forStatement, std::string additional) {
+        if(forStatement.init != nullptr){
+            this->visit(*forStatement.init, additional);
+        }
 
-        return std::any();
+        if (forStatement.condition != nullptr) {
+            this->visit(*forStatement.condition, additional);
+        }
+
+        if(forStatement.increment != nullptr) {
+            this->visit(*forStatement.increment, additional);
+        }
+        //visit stmt
+        this.visit(*forStatement.stmt, additional);
     }
 
     std::any AstVisitor::visitBinary(Binary &binary, std::string additional) {

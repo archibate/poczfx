@@ -141,14 +141,14 @@ namespace zeno::zfx {
     };
 
     struct ParameterList : public AST{
-        std::vector<VariableDecl> params;
+        std::vector<std::shared_ptr<VariableDecl>> params;
         ParameterList(Position beginPos, Position endPos, std::vector<VariableDecl> &params) :
-        {
+        AST(beginPos, endPos), params(params){
 
         }
 
-        std::any accept(AstVisitor &visitor) {
-            return visitor.visitParameterList(*this);
+        std::any accept(AstVisitor &visitor, std::string additional) {
+            return visitor.visitParameterList(*this, additional);
         }
 
     };
